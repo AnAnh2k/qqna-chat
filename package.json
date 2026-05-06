@@ -1,0 +1,19 @@
+{
+  "name": "qqna-chat",
+  "version": "1.0.0",
+  "description": "Vietnamese Q&A/Chat application (MERN Stack)",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --workspace=backend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
