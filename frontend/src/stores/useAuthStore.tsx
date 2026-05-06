@@ -1,27 +1,92 @@
 import { create } from "zustand";
 import { toast } from "sonner";
+import { authService } from "@/services/authServiec";
+import type { AuthState } from "@/types/store";
 
-export const useAuthStore = create((set, get) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   user: null,
   loading: false,
 
+  setAccessToken: (accessToken) => {
+    set({ accessToken });
+  },
+
+  clearState: () => {
+    set({ accessToken: null, user: null, loading: false });
+  },
+
   signUp: async (username, password, email, firstName, lastName) => {
-    set({ loading: true });
     try {
       set({ loading: true });
       // gọi backend API để đăng ký người dùng
-      console.log("Đăng ký với dữ liệu:", {
-        username,
-        password,
-        email,
-        firstName,
-        lastName,
-      });
+      await authService.signUp(username, password, email, firstName, lastName);
       toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
     } catch (error) {
       console.error("Lỗi khi đăng ký:", error);
       toast.error("Đăng ký không thành công. Vui lòng thử lại.");
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+  signIn: async (username, password) => {
+    try {
+      set({ loading: true });
+      const { accessToken } = await authService.signIn(username, password);
+      get().setAccessToken(accessToken);
+
+      await get().fetchMe();
+      toast.success("Chào mừng bạn quay lại vơi QQNA 🎉!");
+    } catch (error) {
+      console.error("Lỗi khi đăng nhập:", error);
+      toast.error("Đăng nhập không thành công. Vui lòng kiểm tra lại.");
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+  signOut: async () => {
+    try {
+      get().clearState();
+      await authService.signOut();
+      toast.success("Đăng xuất thành công!");
+    } catch (error) {
+      console.error("Lỗi khi đăng xuất:", error);
+      toast.error("Đăng xuất không thành công. Vui lòng thử lại.");
+      throw error;
+    }
+  },
+
+  fetchMe: async () => {
+    try {
+      set({ loading: true });
+      const user = await authService.fetchMe();
+      set({ user });
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin người dùng:", error);
+      set({ user: null, accessToken: null });
+      toast.error("Không thể lấy thông tin người dùng. Vui lòng thử lại.");
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  refresh: async () => {
+    try {
+      set({ loading: true });
+      const { user, fetchMe } = get();
+
+      const accessToken = await authService.refresh();
+      get().setAccessToken(accessToken);
+      if (!user) {
+        await fetchMe();
+      }
+      return accessToken;
+    } catch (error) {
+      console.error("Lỗi khi refresh token:", error);
+      toast.error("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!");
+      get().clearState();
     } finally {
       set({ loading: false });
     }

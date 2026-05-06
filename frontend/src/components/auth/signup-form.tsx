@@ -6,6 +6,8 @@ import { Label } from "../ui/label";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useNavigate } from "react-router";
 
 const signUpSchema = z.object({
   firstName: z.string().min(1, "Tên bắt buộc phải có").max(100),
@@ -24,6 +26,8 @@ export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { signUp } = useAuthStore();
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
@@ -33,8 +37,14 @@ export function SignupForm({
   });
 
   const onSubmit = async (data: SignupFormValues) => {
+    const { firstName, lastName, username, email, password } = data;
     // gọi backend API để đăng ký người dùng
-    console.log(data);
+    try {
+      await signUp(username, password, email, firstName, lastName);
+      navigate("/signin");
+    } catch {
+      // toast đã được store xử lý
+    }
   };
 
   return (
@@ -64,7 +74,6 @@ export function SignupForm({
                     placeholder="Nhập họ của bạn"
                     {...register("lastName")}
                   />
-                  {/* todo: error message */}
                   {errors.lastName && (
                     <p className="text-sm text-destructive">
                       {errors.lastName.message}
@@ -79,7 +88,6 @@ export function SignupForm({
                     placeholder="Nhập tên của bạn"
                     {...register("firstName")}
                   />
-                  {/* todo: error message */}
                   {errors.firstName && (
                     <p className="text-sm text-destructive">
                       {errors.firstName.message}
@@ -97,7 +105,6 @@ export function SignupForm({
                   placeholder="Nhập tên đăng nhập"
                   {...register("username")}
                 />
-                {/* todo: error message */}
                 {errors.username && (
                   <p className="text-sm text-destructive">
                     {errors.username.message}
@@ -114,7 +121,6 @@ export function SignupForm({
                   placeholder="qqan@gmail.com"
                   {...register("email")}
                 />
-                {/* todo: error message */}
                 {errors.email && (
                   <p className="text-sm text-destructive">
                     {errors.email.message}
@@ -132,7 +138,6 @@ export function SignupForm({
                   {...register("password")}
                 />
 
-                {/* todo: error message */}
                 {errors.password && (
                   <p className="text-sm text-destructive">
                     {errors.password.message}

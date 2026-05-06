@@ -6,6 +6,8 @@ import { Label } from "../ui/label";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useNavigate } from "react-router";
 
 const signInSchema = z.object({
   username: z
@@ -21,6 +23,9 @@ export function SignInForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const { signIn } = useAuthStore();
+  const navigate = useNavigate();
+
   const {
     register,
     handleSubmit,
@@ -31,7 +36,13 @@ export function SignInForm({
 
   const onSubmit = async (data: SignInFormValues) => {
     // gọi backend API để đăng nhập người dùng
-    console.log(data);
+    const { username, password } = data;
+    try {
+      await signIn(username, password);
+      navigate("/"); // điều hướng về trang chủ sau khi đăng nhập thành công
+    } catch {
+      // toast đã được store xử lý
+    }
   };
 
   return (
@@ -60,7 +71,6 @@ export function SignInForm({
                   placeholder="Nhập tên đăng nhập"
                   {...register("username")}
                 />
-                {/* todo: error message */}
                 {errors.username && (
                   <p className="text-sm text-destructive">
                     {errors.username.message}
@@ -78,7 +88,6 @@ export function SignInForm({
                   {...register("password")}
                 />
 
-                {/* todo: error message */}
                 {errors.password && (
                   <p className="text-sm text-destructive">
                     {errors.password.message}
