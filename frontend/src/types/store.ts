@@ -1,4 +1,4 @@
-import type { User } from "./User";
+import type { User } from "./user";
 
 export interface AuthState {
   accessToken: string | null;
@@ -24,4 +24,10 @@ export interface AuthState {
   fetchMe: () => Promise<void>;
 
   refresh: () => Promise<string>;
+}
+
+export interface ThemeState {
+  isDark: boolean;
+  toggleTheme: () => void;
+  setTheme: (dark: boolean) => void;
 }

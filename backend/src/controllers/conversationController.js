@@ -37,7 +37,6 @@ export const createConversation = async (req, res) => {
           participants: [{ userId: userId }, { userId: participantId }],
           lastMessageAt: new Date(),
         });
-
         await conversation.save();
       }
     } else if (type === "group") {

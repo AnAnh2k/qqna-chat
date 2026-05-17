@@ -4,8 +4,15 @@ import ChatAppPage from "./pages/ChatAppPage";
 import SignUpPage from "./pages/SignUpPage";
 import { Toaster } from "sonner";
 import ProtecedRoute from "./components/auth/ProtecedRoute";
+import { useThemeStore } from "./stores/useThemeStore";
+import { useEffect } from "react";
 
 function App() {
+  const { isDark, setTheme } = useThemeStore();
+
+  useEffect(() => {
+    setTheme(isDark);
+  }, [isDark]);
   return (
     <>
       <Toaster richColors position="top-right" closeButton={true} />
