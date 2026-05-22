@@ -3,7 +3,7 @@ import SignInPage from "./pages/SignInPage";
 import ChatAppPage from "./pages/ChatAppPage";
 import SignUpPage from "./pages/SignUpPage";
 import { Toaster } from "sonner";
-import ProtecedRoute from "./components/auth/ProtecedRoute";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { useThemeStore } from "./stores/useThemeStore";
 import { useEffect } from "react";
 
@@ -12,7 +12,7 @@ function App() {
 
   useEffect(() => {
     setTheme(isDark);
-  }, [isDark]);
+  }, [isDark, setTheme]);
   return (
     <>
       <Toaster richColors position="top-right" closeButton={true} />
@@ -22,7 +22,7 @@ function App() {
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
           {/* protected routes */}
-          <Route element={<ProtecedRoute />}>
+          <Route element={<ProtectedRoute />}>
             <Route path="/" element={<ChatAppPage />} />
           </Route>
         </Routes>

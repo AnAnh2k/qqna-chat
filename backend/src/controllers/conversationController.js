@@ -2,6 +2,27 @@ import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import mongoose from "mongoose";
 
+const formatConversation = (convo) => {
+  const plainConvo = convo.toObject ? convo.toObject() : convo;
+  const participants = (plainConvo.participants || []).map((p) => ({
+    _id: p.userId?._id,
+    displayName: p.userId?.displayName,
+    avatarUrl: p.userId?.avatarUrl ?? null,
+    joinedAt: p.joinedAt,
+  }));
+
+  const unreadCounts =
+    plainConvo.unreadCounts instanceof Map
+      ? Object.fromEntries(plainConvo.unreadCounts)
+      : plainConvo.unreadCounts || {};
+
+  return {
+    ...plainConvo,
+    unreadCounts,
+    participants,
+  };
+};
+
 export const createConversation = async (req, res) => {
   try {
     const { type, name, memberIds } = req.body;
@@ -65,7 +86,7 @@ export const createConversation = async (req, res) => {
       { path: "lastMessage.senderId", select: "displayName avatarUrl" },
     ]);
 
-    res.status(201).json({ conversation });
+    res.status(201).json({ conversation: formatConversation(conversation) });
   } catch (error) {
     console.error("Lỗi khi gọi createConversation:", error);
     res.status(500).json({ message: "Lỗi hệ thống" });
@@ -92,26 +113,7 @@ export const getConversations = async (req, res) => {
         select: "displayName avatarUrl",
       });
 
-    const formatted = conversations.map((convo) => {
-      const participants = (convo.participants || []).map((p) => ({
-        _id: p.userId?._id,
-        displayName: p.userId?.displayName,
-        avatarUrl: p.userId?.avatarUrl ?? null,
-        joinedAt: p.joinedAt,
-      }));
-
-      const plainConvo = convo.toObject();
-      const unreadCounts =
-        plainConvo.unreadCounts instanceof Map
-          ? Object.fromEntries(plainConvo.unreadCounts)
-          : plainConvo.unreadCounts || {};
-
-      return {
-        ...plainConvo,
-        unreadCounts,
-        participants,
-      };
-    });
+    const formatted = conversations.map(formatConversation);
 
     res.status(200).json({ conversations: formatted });
   } catch (error) {
