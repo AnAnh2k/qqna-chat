@@ -291,7 +291,6 @@
 
   /* Pulse ring for unread messages */
   .pulse-ring {
-    @apply relative;
   }
 
   .pulse-ring::before {

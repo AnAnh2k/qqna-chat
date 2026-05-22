@@ -5,7 +5,7 @@ import { updateConversationAfterCreateMessage } from "../utils/messageHelper.js"
 export const sendDirectMessage = async (req, res) => {
   try {
     const { recipientId, content, conversationId } = req.body;
-    const senderId = req.user._id; // Lấy ID người gửi từ token đã xác thực
+    const senderId = req.user._id;
 
     let conversation;
 
@@ -17,6 +17,15 @@ export const sendDirectMessage = async (req, res) => {
       // Nếu đã có conversationId, tìm kiếm cuộc trò chuyện đó
       conversation = await Conversation.findById(conversationId);
     }
+
+    if (!conversation && recipientId) {
+      // Tìm xem đã có cuộc trò chuyện direct giữa 2 người chưa trước khi tạo mới
+      conversation = await Conversation.findOne({
+        type: "direct",
+        "participants.userId": { $all: [senderId, recipientId] },
+      });
+    }
+
     if (!conversation) {
       conversation = await Conversation.create({
         type: "direct",
@@ -24,7 +33,7 @@ export const sendDirectMessage = async (req, res) => {
           { userId: senderId, joinedAt: new Date() },
           { userId: recipientId, joinedAt: new Date() },
         ],
-        lastMessage: new Date(),
+        lastMessageAt: new Date(),
         unreadCounts: new Map(),
       });
     }
@@ -35,25 +44,25 @@ export const sendDirectMessage = async (req, res) => {
       content,
     });
 
-    updateConversationAfterCreateMessage(conversation, message, senderId);
+    await updateConversationAfterCreateMessage(conversation, message, senderId);
+
     await conversation.save();
 
-    res.status(201).json({ message });
+    return res.status(201).json({ message });
   } catch (error) {
-    console.error("Lỗi khi gửi tin nhắn trực tiếp:", error);
-    res.status(500).json({ message: "Lỗi hệ thống" });
+    console.error("Lỗi xảy ra khi gửi tin nhắn trực tiếp", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
 
 export const sendGroupMessage = async (req, res) => {
   try {
     const { conversationId, content } = req.body;
-    const senderId = req.user._id; // Lấy ID người gửi từ token đã xác thực
-
-    const conversation = req.conversation; // conversation đã được middleware checkFriendship gắn vào req
+    const senderId = req.user._id;
+    const conversation = req.conversation;
 
     if (!content) {
-      return res.status(400).json({ message: "Thiếu nội dung" });
+      return res.status(400).json("Thiếu nội dung");
     }
 
     const message = await Message.create({
@@ -62,12 +71,13 @@ export const sendGroupMessage = async (req, res) => {
       content,
     });
 
-    updateConversationAfterCreateMessage(conversation, message, senderId);
+    await updateConversationAfterCreateMessage(conversation, message, senderId);
+
     await conversation.save();
 
     return res.status(201).json({ message });
   } catch (error) {
-    console.error("Lỗi khi gửi tin nhắn nhóm:", error);
-    res.status(500).json({ message: "Lỗi hệ thống" });
+    console.error("Lỗi xảy ra khi gửi tin nhắn nhóm", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
