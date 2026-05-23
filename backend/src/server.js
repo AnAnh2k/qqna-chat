@@ -10,7 +10,7 @@ import friendRoute from "./routes/friendRoute.js";
 import messageRoute from "./routes/messageRoute.js";
 import conversationRoute from "./routes/conversationRoute.js";
 import express from "express";
-import { app, server } from "./socket/index.js";
+import { app, server, io } from "./socket/index.js";
 dotenv.config();
 
 const PORT = process.env.PORT || 5001;
@@ -42,25 +42,26 @@ connectDB().then(() => {
 
   // Graceful shutdown cho Nodemon restart (SIGUSR2)
   process.once("SIGUSR2", () => {
-    activeServer.close(() => {
-      console.log("Đã giải phóng cổng 5001 (SIGUSR2)");
-      process.kill(process.pid, "SIGUSR2");
-    });
+    io.close();
+    activeServer.close();
+    console.log("Đã giải phóng cổng 5001 (SIGUSR2)");
+    process.kill(process.pid, "SIGUSR2");
   });
 
   // Graceful shutdown khi nhấn Ctrl + C (SIGINT)
   process.on("SIGINT", () => {
-    activeServer.close(() => {
-      console.log("Đã giải phóng cổng 5001 (SIGINT)");
-      process.exit(0);
-    });
+    io.close();
+    activeServer.close();
+    console.log("Đã giải phóng cổng 5001 (SIGINT)");
+    process.exit(0);
   });
 
   // Graceful shutdown khi tắt tiến trình (SIGTERM)
   process.on("SIGTERM", () => {
-    activeServer.close(() => {
-      console.log("Đã giải phóng cổng 5001 (SIGTERM)");
-      process.exit(0);
-    });
+    io.close();
+    activeServer.close();
+    console.log("Đã giải phóng cổng 5001 (SIGTERM)");
+    process.exit(0);
   });
 });
+// restarted!

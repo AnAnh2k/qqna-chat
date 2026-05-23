@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon --delay 1 src/server.js"
+    "dev": "nodemon"
   },
   "type": "module",
   "keywords": [],
