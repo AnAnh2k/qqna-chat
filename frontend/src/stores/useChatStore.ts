@@ -6,58 +6,82 @@ import { useAuthStore } from "./useAuthStore";
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       conversations: [],
-      messages: {}, // key = conversationId, value = { items: Message[], hasMore: boolean, nextCursor: string | null }
+      messages: {},
       activeConversationId: null,
+      convoLoading: false, // convo loading
+      messageLoading: false,
       loading: false,
 
-      setActiveConversation: (id) => {
-        set({ activeConversationId: id });
-      },
-
+      setActiveConversation: (id) => set({ activeConversationId: id }),
       reset: () => {
         set({
           conversations: [],
           messages: {},
           activeConversationId: null,
-          loading: false,
+          convoLoading: false,
+          messageLoading: false,
         });
       },
       fetchConversations: async () => {
         try {
-          set({ loading: true });
+          set({ convoLoading: true });
           const { conversations } = await chatService.fetchConversations();
-          set({ conversations, loading: false });
+
+          set({ conversations, convoLoading: false });
         } catch (error) {
-          console.error("Lỗi khi fetch conversations:", error);
-        } finally {
-          set({ loading: false });
+          console.error("Lỗi xảy ra khi fetchConversations:", error);
+          set({ convoLoading: false });
         }
       },
-      markAsRead: async (conversationId: string) => {
-        try {
-          set((state) => {
-            const conversations = state.conversations.map((convo) => {
-              if (convo._id === conversationId) {
-                const updatedUnread = { ...convo.unreadCounts };
-                const userId = useAuthStore.getState().user?._id;
-                if (userId) {
-                  updatedUnread[userId] = 0;
-                }
-                return {
-                  ...convo,
-                  unreadCounts: updatedUnread,
-                };
-              }
-              return convo;
-            });
-            return { conversations };
-          });
+      fetchMessages: async (conversationId) => {
+        const { activeConversationId, messages } = get();
+        const { user } = useAuthStore.getState();
 
-          await chatService.markAsRead(conversationId);
+        const convoId = conversationId ?? activeConversationId;
+
+        if (!convoId) return;
+
+        const current = messages?.[convoId];
+        const nextCursor =
+          current?.nextCursor === undefined ? "" : current?.nextCursor;
+
+        if (nextCursor === null) return;
+
+        set({ messageLoading: true });
+
+        try {
+          const { messages: fetched, cursor } = await chatService.fetchMessages(
+            convoId,
+            nextCursor,
+          );
+
+          const processed = fetched.map((m) => ({
+            ...m,
+            isOwn: m.senderId === user?._id,
+          }));
+
+          set((state) => {
+            const prev = state.messages[convoId]?.items ?? [];
+            const merged =
+              prev.length > 0 ? [...processed, ...prev] : processed;
+
+            return {
+              messages: {
+                ...state.messages,
+                [convoId]: {
+                  items: merged,
+                  hasMore: !!cursor,
+                  nextCursor: cursor ?? null,
+                },
+              },
+            };
+          });
         } catch (error) {
-          console.error("Lỗi khi markAsRead:", error);
+          console.error("Lỗi xảy ra khi fetchMessages:", error);
+        } finally {
+          set({ messageLoading: false });
         }
       },
     }),

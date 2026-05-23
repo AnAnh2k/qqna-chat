@@ -39,14 +39,17 @@ export interface ChatState {
     string,
     {
       items: Message[];
-      hasMore: boolean; // có còn tin nhắn nào nữa để tải không
-      nextCursor: string | null; // cursor để tải trang tiếp theo, có thể là timestamp hoặc messageId của tin nhắn cuối cùng
+      hasMore: boolean; // infinite-scroll
+      nextCursor?: string | null; // phân trang
     }
   >;
   activeConversationId: string | null;
+  convoLoading: boolean;
+  messageLoading: boolean;
   loading: boolean;
   reset: () => void;
+
   setActiveConversation: (id: string | null) => void;
   fetchConversations: () => Promise<void>;
-  markAsRead: (conversationId: string) => Promise<void>;
+  fetchMessages: (conversationId?: string) => Promise<void>;
 }

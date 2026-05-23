@@ -7,8 +7,12 @@ import GroupChatAvatar from "./GroupChatAvatar";
 
 const GroupChatCard = ({ convo }: { convo: Conversation }) => {
   const { user } = useAuthStore();
-  const { activeConversationId, setActiveConversation, messages, markAsRead } =
-    useChatStore();
+  const {
+    activeConversationId,
+    setActiveConversation,
+    messages,
+    fetchMessages,
+  } = useChatStore();
 
   if (!user) return null;
 
@@ -16,9 +20,9 @@ const GroupChatCard = ({ convo }: { convo: Conversation }) => {
   const name = convo.group?.name ?? "";
   const handleSelectConversation = async (id: string) => {
     setActiveConversation(id);
-    await markAsRead(id);
     if (!messages[id]) {
       // fetch messages for this conversation if not already loaded}
+      await fetchMessages();
     }
   };
 

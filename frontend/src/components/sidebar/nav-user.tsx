@@ -19,11 +19,6 @@ import {
 import type { User } from "@/types/user";
 import {
   ChevronsUpDownIcon,
-  SparklesIcon,
-  BadgeCheckIcon,
-  CreditCardIcon,
-  BellIcon,
-  LogOutIcon,
   UserIcon,
   Bell,
 } from "lucide-react";
