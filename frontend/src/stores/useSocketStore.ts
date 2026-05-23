@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { io, type Socket } from "socket.io-client";
 import { useAuthStore } from "./useAuthStore";
 import type { SocketState } from "@/types/store";
-import { useChatStore } from "./useChatStore";
 
 const baseURL = import.meta.env.VITE_SOCKET_URL;
 
@@ -24,6 +23,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
     socket.on("connect", () => {
       console.log("Đã kết nối với socket");
+    });
+
+    // online users
+    socket.on("online-users", (userIds) => {
+      set({ onlineUsers: userIds });
     });
   },
   disconnectSocket: () => {

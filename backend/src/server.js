@@ -36,7 +36,31 @@ app.use("/api/messages", messageRoute);
 app.use("/api/conversations", conversationRoute);
 
 connectDB().then(() => {
-  server.listen(PORT, () => {
+  const activeServer = server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}: http://localhost:${PORT}`);
+  });
+
+  // Graceful shutdown cho Nodemon restart (SIGUSR2)
+  process.once("SIGUSR2", () => {
+    activeServer.close(() => {
+      console.log("Đã giải phóng cổng 5001 (SIGUSR2)");
+      process.kill(process.pid, "SIGUSR2");
+    });
+  });
+
+  // Graceful shutdown khi nhấn Ctrl + C (SIGINT)
+  process.on("SIGINT", () => {
+    activeServer.close(() => {
+      console.log("Đã giải phóng cổng 5001 (SIGINT)");
+      process.exit(0);
+    });
+  });
+
+  // Graceful shutdown khi tắt tiến trình (SIGTERM)
+  process.on("SIGTERM", () => {
+    activeServer.close(() => {
+      console.log("Đã giải phóng cổng 5001 (SIGTERM)");
+      process.exit(0);
+    });
   });
 });
