@@ -33,12 +33,12 @@ const ChatWindowBody = () => {
         id="scrollableDiv"
         className="flex flex-col-reverse overflow-y-auto overflow-x-hidden beautiful-scrollbar"
       >
-        {messages.map((message, index) => (
+        {[...messages].reverse().map((message, index, array) => (
           <MessageItem
             key={message._id}
             message={message}
             index={index}
-            messages={messages}
+            messages={array}
             selectedConvo={selectedConvo}
             lastMessageStatus="delivered"
           />

@@ -22,7 +22,7 @@ const MessageItem = ({
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
 
   const isShowTime =
-    index === 0 ||
+    index === messages.length - 1 ||
     new Date(message.createdAt).getTime() -
       new Date(prev?.createdAt || 0).getTime() >
       300000; // 5 phút
@@ -34,10 +34,10 @@ const MessageItem = ({
   );
 
   return (
-    <>
+    <div className="flex flex-col">
       {/* time */}
       {isShowTime && (
-        <span className="flex justify-center text-xs text-muted-foreground px-1">
+        <span className="flex justify-center text-xs text-muted-foreground px-1 py-2">
           {formatMessageTime(new Date(message.createdAt))}
         </span>
       )}
@@ -97,7 +97,7 @@ const MessageItem = ({
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
