@@ -191,3 +191,15 @@ export const markAsRead = async (req, res) => {
     res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
+
+export const getUserConversationsForSocketIO = async (userId) => {
+  try {
+    const conversations = await Conversation.find({
+      "participants.userId": userId,
+    }).select("_id");
+    return conversations.map((c) => c._id.toString());
+  } catch (error) {
+    console.error("Lỗi khi getUserConversationsForSocketIO:", error);
+    return [];
+  }
+};
