@@ -88,11 +88,11 @@ export const acceptFriendRequest = async (req, res) => {
     await FriendRequest.findByIdAndDelete(requestId);
 
     const from = await User.findById(request.from)
-      .select("_id displayName email")
+      .select("_id displayName email username")
       .lean();
 
     const to = await User.findById(request.to)
-      .select("_id displayName email")
+      .select("_id displayName email username")
       .lean();
 
     return res.status(200).json({
@@ -101,6 +101,7 @@ export const acceptFriendRequest = async (req, res) => {
         _id: from?._id,
         displayName: from?.displayName,
         avatarUrl: from?.avatarUrl,
+        username: from?.username,
       },
     });
   } catch (error) {
@@ -144,8 +145,8 @@ export const getAllFriends = async (req, res) => {
     const friendships = await Friend.find({
       $or: [{ userA: userId }, { userB: userId }],
     })
-      .populate("userA", "_id displayName avatarUrl")
-      .populate("userB", "_id displayName avatarUrl")
+      .populate("userA", "_id displayName avatarUrl username")
+      .populate("userB", "_id displayName avatarUrl username")
       .lean();
 
     if (!friendships.length) {
@@ -160,6 +161,7 @@ export const getAllFriends = async (req, res) => {
         _id: friendObj._id,
         displayName: friendObj.displayName,
         avatarUrl: friendObj.avatarUrl,
+        username: friendObj.username,
       };
     });
 

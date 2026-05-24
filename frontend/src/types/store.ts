@@ -1,4 +1,4 @@
-import type { Socket } from "node_modules/socket.io-client/build/esm/socket";
+import type { Socket } from "socket.io-client";
 import type { Conversation, Message } from "./chat";
 import type { Friend, FriendRequest, User } from "./user";
 
@@ -8,9 +8,8 @@ export interface AuthState {
   loading: boolean;
 
   setAccessToken: (accessToken: string) => void;
-
+  setUser: (user: User) => void;
   clearState: () => void;
-
   signUp: (
     username: string,
     password: string,
@@ -18,14 +17,10 @@ export interface AuthState {
     firstName: string,
     lastName: string,
   ) => Promise<void>;
-
   signIn: (username: string, password: string) => Promise<void>;
-
   signOut: () => Promise<void>;
-
   fetchMe: () => Promise<void>;
-
-  refresh: () => Promise<string>;
+  refresh: () => Promise<void>;
 }
 
 export interface ThemeState {
@@ -68,7 +63,14 @@ export interface ChatState {
   // update convo
   updateConversation: (conversation: unknown) => void;
   markAsSeen: () => Promise<void>;
+  addConvo: (convo: Conversation) => void;
+  createConversation: (
+    type: "group" | "direct",
+    name: string,
+    memberIds: string[],
+  ) => Promise<void>;
 }
+
 export interface SocketState {
   socket: Socket | null;
   onlineUsers: string[];
@@ -77,6 +79,7 @@ export interface SocketState {
 }
 
 export interface FriendState {
+  friends: Friend[];
   loading: boolean;
   receivedList: FriendRequest[];
   sentList: FriendRequest[];
@@ -85,4 +88,9 @@ export interface FriendState {
   getAllFriendRequests: () => Promise<void>;
   acceptRequest: (requestId: string) => Promise<void>;
   declineRequest: (requestId: string) => Promise<void>;
+  getFriends: () => Promise<void>;
+}
+
+export interface UserState {
+  updateAvatarUrl: (formData: FormData) => Promise<void>;
 }
