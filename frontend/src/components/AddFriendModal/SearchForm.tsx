@@ -55,16 +55,18 @@ const SearchForm = ({
       </div>
 
       <DialogFooter>
-        <DialogClose asChild>
-          <Button
-            type="button"
-            variant="outline"
-            className="flex-1 glass hover:text-destructive"
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-        </DialogClose>
+        <DialogClose
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 glass hover:text-destructive"
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          }
+        />
 
         <Button
           type="submit"

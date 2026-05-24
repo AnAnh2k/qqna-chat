@@ -16,7 +16,7 @@ const Logout = () => {
     }
   };
   return (
-    <Button variant={"completeghost"} onClick={handleLogout}>
+    <Button variant={"completeGhost"} onClick={handleLogout}>
       <LogOut className="text-destructive" />
       Đăng xuất
     </Button>

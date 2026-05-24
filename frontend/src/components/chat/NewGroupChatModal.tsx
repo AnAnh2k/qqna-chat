@@ -1,5 +1,5 @@
 import { useFriendStore } from "@/stores/useFriendStore";
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,20 +25,20 @@ const NewGroupChatModal = () => {
   const [invitedUsers, setInvitedUsers] = useState<Friend[]>([]);
   const { loading, createConversation } = useChatStore();
 
-  const handleGetFriends = async () => {
+  const handleGetFriends = useCallback(async () => {
     await getFriends();
-  };
+  }, [getFriends]);
 
-  const handleSelectFriend = (friend: Friend) => {
-    setInvitedUsers([...invitedUsers, friend]);
+  const handleSelectFriend = useCallback((friend: Friend) => {
+    setInvitedUsers((prev) => [...prev, friend]);
     setSearch("");
-  };
+  }, []);
 
-  const handleRemoveFriend = (friend: Friend) => {
-    setInvitedUsers(invitedUsers.filter((u) => u._id !== friend._id));
-  };
+  const handleRemoveFriend = useCallback((friend: Friend) => {
+    setInvitedUsers((prev) => prev.filter((u) => u._id !== friend._id));
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     try {
       e.preventDefault();
       if (invitedUsers.length === 0) {
@@ -60,26 +60,31 @@ const NewGroupChatModal = () => {
         error,
       );
     }
-  };
+  }, [groupName, invitedUsers, createConversation]);
 
-  const filteredFriends = friends.filter(
-    (friend) =>
-      friend.displayName.toLowerCase().includes(search.toLowerCase()) &&
-      !invitedUsers.some((u) => u._id === friend._id),
-  );
+  const filteredFriends = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return friends.filter(
+      (friend) =>
+        friend.displayName.toLowerCase().includes(searchLower) &&
+        !invitedUsers.some((u) => u._id === friend._id),
+    );
+  }, [friends, search, invitedUsers]);
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          onClick={handleGetFriends}
-          className="flex z-10 justify-center items-center size-5 rounded-full hover:bg-sidebar-accent transition cursor-pointer"
-        >
-          <Users className="size-4" />
-          <span className="sr-only">Tạo nhóm</span>
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button
+            variant="ghost"
+            onClick={handleGetFriends}
+            className="flex z-10 justify-center items-center size-5 rounded-full hover:bg-sidebar-accent transition cursor-pointer"
+          >
+            <Users className="size-4" />
+            <span className="sr-only">Tạo nhóm</span>
+          </Button>
+        }
+      />
 
       <DialogContent className="sm:max-w-[425px] border-none">
         <DialogHeader>
@@ -116,13 +121,19 @@ const NewGroupChatModal = () => {
               className="flex-1"
             />
 
-            {/* danh sách gợi ý */}
-            {filteredFriends.length > 0 && (
-              <IniviteSuggestionList
-                filteredFriends={filteredFriends}
-                onSelect={handleSelectFriend}
-              />
-            )}
+           {/* danh sách gợi ý */}
+{filteredFriends.length > 0 && (
+  <div className="space-y-1.5 pt-1">
+    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+      Danh sách bạn bè
+    </span>
+    <IniviteSuggestionList
+      filteredFriends={filteredFriends}
+      onSelect={handleSelectFriend}
+    />
+  </div>
+)}
+
 
             {/* danh sách user đã chọn */}
             <SelectedUsersList

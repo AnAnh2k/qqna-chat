@@ -25,9 +25,12 @@ import DirectMessageList from "../chat/DirectMessageList";
 import { useThemeStore } from "@/stores/useThemeStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { NavUser } from "./nav-user";
+import ConversationSkeleton from "../skeleton/ConversationSkeleton";
+import { useChatStore } from "@/stores/useChatStore";
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isDark, toggleTheme } = useThemeStore();
   const { user } = useAuthStore();
+  const { convoLoading } = useChatStore();
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -64,27 +67,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* group chat */}
-
+        {/* Group Chat */}
         <SidebarGroup>
-          <SidebarGroupLabel className="uppercase">Nhóm chat</SidebarGroupLabel>
-          <SidebarGroupAction title="Tạo nhóm" className="cursor-pointer">
+          <div className="flex items-center justify-between">
+            <SidebarGroupLabel className="uppercase">
+              nhóm chat
+            </SidebarGroupLabel>
             <NewGroupChatModal />
-          </SidebarGroupAction>
+          </div>
+
           <SidebarGroupContent>
-            <GroupChatList />
+            {convoLoading ? <ConversationSkeleton /> : <GroupChatList />}
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Dirrect messages */}
-
+        {/* Dirrect Message */}
         <SidebarGroup>
-          <SidebarGroupLabel className="uppercase">Ban bè</SidebarGroupLabel>
-          <SidebarGroupAction title="kết bạn" className="cursor-pointer">
+          <SidebarGroupLabel className="uppercase">bạn bè</SidebarGroupLabel>
+          <SidebarGroupAction title="Kết Bạn" className="cursor-pointer">
             <AddFriendModal />
           </SidebarGroupAction>
+
           <SidebarGroupContent>
-            <DirectMessageList />
+            {convoLoading ? <ConversationSkeleton /> : <DirectMessageList />}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
