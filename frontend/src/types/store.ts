@@ -1,6 +1,6 @@
 import type { Socket } from "node_modules/socket.io-client/build/esm/socket";
 import type { Conversation, Message } from "./chat";
-import type { User } from "./user";
+import type { Friend, FriendRequest, User } from "./user";
 
 export interface AuthState {
   accessToken: string | null;
@@ -74,4 +74,10 @@ export interface SocketState {
   onlineUsers: string[];
   connectSocket: () => void;
   disconnectSocket: () => void;
+}
+
+export interface FriendState {
+  loading: boolean;
+  searchByUsername: (username: string) => Promise<User | null>;
+  addFriend: (to: string, message?: string) => Promise<string>;
 }
