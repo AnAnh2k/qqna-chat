@@ -2,7 +2,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5001/api", // Đặt baseURL từ biến môi trường
+  baseURL: import.meta.env.VITE_API_URL, // Đặt baseURL từ biến môi trường
   withCredentials: true, // Gửi cookie cùng với yêu cầu
 });
 
