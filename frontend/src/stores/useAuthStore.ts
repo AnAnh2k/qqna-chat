@@ -17,8 +17,10 @@ export const useAuthStore = create<AuthState>()(
 
       clearState: () => {
         set({ accessToken: null, user: null, loading: false });
-        localStorage.clear(); // Xóa toàn bộ localStorage khi đăng xuất, bao gồm cả các store khác nếu có. Nếu chỉ muốn xóa auth-store, có thể sử dụng localStorage.removeItem("auth-storage") thay vì clear()
         useChatStore.getState().reset(); // Reset chat store về trạng thái ban đầu khi đăng xuất
+
+        localStorage.clear(); // Xóa toàn bộ localStorage khi đăng xuất, bao gồm cả các store khác nếu có. Nếu chỉ muốn xóa auth-store, có thể sử dụng localStorage.removeItem("auth-storage") thay vì clear()
+        sessionStorage.clear(); // Xóa sessionStorage khi đăng xuất nếu có sử dụng
       },
 
       signUp: async (username, password, email, firstName, lastName) => {
@@ -43,10 +45,10 @@ export const useAuthStore = create<AuthState>()(
       },
       signIn: async (username, password) => {
         try {
+          get().clearState(); // Clear state trước khi đăng nhập mới để tránh dữ liệu cũ còn
           set({ loading: true });
 
           localStorage.clear(); // Xóa toàn bộ localStorage trước khi đăng nhập, bao gồm cả các store khác nếu có. Nếu chỉ muốn xóa auth-store, có thể sử dụng localStorage.removeItem("auth-storage") thay vì clear()
-          useChatStore.getState().reset(); // Reset chat store về trạng thái ban đầu khi đăng nhập mới
 
           const { accessToken } = await authService.signIn(username, password);
           get().setAccessToken(accessToken);
