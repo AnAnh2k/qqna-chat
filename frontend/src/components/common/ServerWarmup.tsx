@@ -51,7 +51,7 @@ const ServerWarmup = ({ children }: ServerWarmupProps) => {
             <MessageCircle className="size-6 text-white" />
           </div>
           <span className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Moji Chat
+            QQNA Chat
           </span>
         </div>
 
