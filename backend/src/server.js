@@ -35,6 +35,9 @@ cloudinary.config({
 });
 
 //public routes
+app.get("/api/ping", (req, res) => {
+  res.status(200).json({ message: "pong" });
+});
 app.use("/api/auth", authRoute);
 
 //private routes

@@ -8,6 +8,7 @@ import { useThemeStore } from "./stores/useThemeStore";
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/useAuthStore";
 import { useSocketStore } from "./stores/useSocketStore";
+import ServerWarmup from "./components/common/ServerWarmup";
 
 function App() {
   const { isDark, setTheme } = useThemeStore();
@@ -26,7 +27,7 @@ function App() {
   }, [accessToken]);
 
   return (
-    <>
+    <ServerWarmup>
       <Toaster richColors position="top-right" closeButton={true} />
       <BrowserRouter>
         <Routes>
@@ -39,7 +40,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </>
+    </ServerWarmup>
   );
 }
 
