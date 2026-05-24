@@ -174,7 +174,7 @@ export const getFriendsRequests = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const populateFields = "_id displayName avatarUrl";
+    const populateFields = "_id displayName username avatarUrl";
 
     const [sent, received] = await Promise.all([
       FriendRequest.find({ from: userId }).populate("to", populateFields),
