@@ -6,12 +6,15 @@ import { cn } from "@/lib/utils";
 import { useSocketStore } from "@/stores/useSocketStore";
 import AvatarUploader from "./AvatarUploader";
 
+import { useAuthStore } from "@/stores/useAuthStore";
+
 interface ProfileCardProps {
   user: User | null;
 }
 
 const ProfileCard = ({ user }: ProfileCardProps) => {
   const { onlineUsers } = useSocketStore();
+  const { user: currentUser } = useAuthStore();
   if (!user) return;
 
   if (!user.bio) {
@@ -19,6 +22,7 @@ const ProfileCard = ({ user }: ProfileCardProps) => {
   }
 
   const isOnline = onlineUsers.includes(user._id) ? true : false;
+  const isOwnProfile = currentUser?._id === user._id;
 
   return (
     <Card className="overflow-hidden p-0 h-52 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
@@ -32,7 +36,7 @@ const ProfileCard = ({ user }: ProfileCardProps) => {
           />
 
           {/* todo upload avatar */}
-          <AvatarUploader />
+          {isOwnProfile && <AvatarUploader />}
         </div>
 
         {/* user info */}

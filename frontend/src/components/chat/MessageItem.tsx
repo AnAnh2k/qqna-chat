@@ -3,6 +3,7 @@ import type { Conversation, Message, Participant } from "@/types/chat";
 import UserAvatar from "./UserAvatar";
 import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";
+import { useUserStore } from "@/stores/useUserStore";
 
 interface MessageItemProps {
   message: Message;
@@ -19,6 +20,7 @@ const MessageItem = ({
   selectedConvo,
   lastMessageStatus,
 }: MessageItemProps) => {
+  const { viewProfile } = useUserStore();
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
 
   const isShowTime =
@@ -52,11 +54,16 @@ const MessageItem = ({
         {!message.isOwn && (
           <div className="w-8">
             {isGroupBreak && (
-              <UserAvatar
-                type="chat"
-                name={participant?.displayName ?? "QQNA"}
-                avatarUrl={participant?.avatarUrl ?? undefined}
-              />
+              <button
+                onClick={() => viewProfile(message.senderId)}
+                className="focus:outline-none cursor-pointer hover:opacity-85 transition-smooth"
+              >
+                <UserAvatar
+                  type="chat"
+                  name={participant?.displayName ?? "QQNA"}
+                  avatarUrl={participant?.avatarUrl ?? undefined}
+                />
+              </button>
             )}
           </div>
         )}

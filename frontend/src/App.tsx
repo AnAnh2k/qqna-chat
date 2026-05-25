@@ -3,9 +3,10 @@ import SignInPage from "./pages/SignInPage";
 import ChatAppPage from "./pages/ChatAppPage";
 import SignUpPage from "./pages/SignUpPage";
 import { Toaster } from "sonner";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
 import GuestRoute from "./components/auth/GuestRoute";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ErrorPage from "./pages/ErrorPage";
+import ProfileDialog from "./components/profile/ProfileDialog";
 import { useThemeStore } from "./stores/useThemeStore";
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/useAuthStore";
@@ -31,6 +32,7 @@ function App() {
   return (
     <ServerWarmup>
       <Toaster richColors position="top-right" closeButton={true} />
+      <ProfileDialog />
       <BrowserRouter>
         <Routes>
           {/* guest routes */}
