@@ -70,6 +70,7 @@ export interface ChatState {
     memberIds: string[],
   ) => Promise<void>;
   clearConversation: (conversationId: string) => Promise<void>;
+  uploadMessageImage: (file: File) => Promise<string>;
   recallMessage: (messageId: string) => Promise<void>;
   handleMessageRecalled: (messageId: string, conversationId: string) => void;
 }

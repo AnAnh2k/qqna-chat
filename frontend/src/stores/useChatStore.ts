@@ -264,6 +264,9 @@ export const useChatStore = create<ChatState>()(
           );
         }
       },
+      uploadMessageImage: async (file) => {
+        return await chatService.uploadMessageImage(file);
+      },
       recallMessage: async (messageId) => {
         try {
           await chatService.recallMessage(messageId);

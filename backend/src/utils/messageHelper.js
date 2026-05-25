@@ -10,6 +10,7 @@ export const updateConversationAfterCreateMessage = async (
       lastMessage: {
         _id: message._id,
         content: message.content,
+        imgUrl: message.imgUrl || null,
         senderId,
         createdAt: message.createdAt,
       },

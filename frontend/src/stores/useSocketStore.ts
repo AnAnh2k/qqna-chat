@@ -37,14 +37,23 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     socket.on("new-message", ({ message, conversation, unreadCounts }) => {
       useChatStore.getState().addMessage(message);
 
+      // Tìm thông tin người gửi từ danh sách participants trong store
+      const existingConvo = useChatStore
+        .getState()
+        .conversations.find((c) => c._id === conversation._id);
+      const senderParticipant = existingConvo?.participants.find(
+        (p) => p._id?.toString() === message.senderId?.toString(),
+      );
+
       const lastMessage = {
         _id: conversation.lastMessage._id,
         content: conversation.lastMessage.content,
+        imgUrl: conversation.lastMessage.imgUrl ?? null,
         createdAt: conversation.lastMessage.createdAt,
         sender: {
-          _id: conversation.lastMessage.senderId,
-          displayName: "",
-          avatarUrl: null,
+          _id: message.senderId?.toString() ?? "",
+          displayName: senderParticipant?.displayName ?? "",
+          avatarUrl: senderParticipant?.avatarUrl ?? null,
         },
       };
 

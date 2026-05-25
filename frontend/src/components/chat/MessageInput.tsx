@@ -1,8 +1,8 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { Conversation } from "@/types/chat";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
-import { ImagePlus, Send, UserPlus } from "lucide-react";
+import { ImagePlus, Send, UserPlus, X, Loader2 } from "lucide-react";
 import { Input } from "../ui/input";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "@/stores/useChatStore";
@@ -11,13 +11,29 @@ import { toast } from "sonner";
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
-  const { sendDirectMessage, sendGroupMessage } = useChatStore();
+  const { sendDirectMessage, sendGroupMessage, uploadMessageImage } =
+    useChatStore();
   const { friends, getFriends } = useFriendStore();
   const [value, setValue] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getFriends();
   }, [getFriends]);
+
+  // Generate preview when image changes
+  useEffect(() => {
+    if (!selectedImage) {
+      setImagePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(selectedImage);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedImage]);
 
   if (!user) return null;
 
@@ -38,18 +54,59 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     }
   }
 
+  const clearImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Chỉ chấp nhận file ảnh!");
+      return;
+    }
+    setSelectedImage(file);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) setSelectedImage(file);
+        break;
+      }
+    }
+  };
+
   const sendMessage = async () => {
-    if (!value.trim()) return;
+    if (!value.trim() && !selectedImage) return;
     const currValue = value;
     setValue("");
 
     try {
+      let imgUrl: string | undefined;
+
+      if (selectedImage) {
+        setUploading(true);
+        try {
+          imgUrl = await uploadMessageImage(selectedImage);
+        } finally {
+          setUploading(false);
+          clearImage();
+        }
+      }
+
       if (selectedConvo.type === "direct") {
-        const participants = selectedConvo.participants;
-        const otherUser = participants.filter((p) => p._id !== user._id)[0];
-        await sendDirectMessage(otherUser._id, currValue);
+        const otherUser = selectedConvo.participants.filter(
+          (p) => p._id !== user._id,
+        )[0];
+        await sendDirectMessage(otherUser._id, currValue, imgUrl);
       } else {
-        await sendGroupMessage(selectedConvo._id, currValue);
+        await sendGroupMessage(selectedConvo._id, currValue, imgUrl);
       }
     } catch (error) {
       console.error(error);
@@ -65,37 +122,75 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   };
 
   return (
-    <div className="flex items-center gap-2 p-3 min-h-[56px] bg-background">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="hover:bg-primary/10 transition-smooth"
-      >
-        <ImagePlus className="size-4" />
-      </Button>
-
-      <div className="flex-1 relative">
-        <Input
-          onKeyPress={handleKeyPress}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Soạn tin nhắn..."
-          className="pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none"
-        ></Input>
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-          <EmojiPicker
-            onChange={(emoji: string) => setValue(`${value}${emoji}`)}
-          />
+    <div className="flex flex-col bg-background border-t border-border/40">
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="px-3 pt-3 pb-1">
+          <div className="relative inline-block">
+            <img
+              src={imagePreview}
+              alt="preview"
+              className="max-h-32 max-w-[200px] rounded-xl object-cover border border-border/50 shadow-sm"
+            />
+            <button
+              onClick={clearImage}
+              className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center shadow hover:scale-110 transition-transform"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <Button
-        onClick={sendMessage}
-        className="bg-gradient-chat hover:shadow-glow transition-smooth hover:scale-105"
-        disabled={!value.trim()}
-      >
-        <Send className="size-4 text-white" />
-      </Button>
+      <div className="flex items-center gap-2 p-3 min-h-[56px]">
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-primary/10 transition-smooth shrink-0"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          title="Gửi ảnh"
+        >
+          {uploading ? (
+            <Loader2 className="size-4 animate-spin text-primary" />
+          ) : (
+            <ImagePlus className="size-4" />
+          )}
+        </Button>
+
+        <div className="flex-1 relative">
+          <Input
+            onKeyPress={handleKeyPress}
+            onPaste={handlePaste}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Soạn tin nhắn..."
+            className="pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none"
+          />
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+            <EmojiPicker
+              onChange={(emoji: string) => setValue(`${value}${emoji}`)}
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={sendMessage}
+          className="bg-gradient-chat hover:shadow-glow transition-smooth hover:scale-105 shrink-0"
+          disabled={(!value.trim() && !selectedImage) || uploading}
+        >
+          <Send className="size-4 text-white" />
+        </Button>
+      </div>
     </div>
   );
 };

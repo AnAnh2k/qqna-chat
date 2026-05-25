@@ -4,13 +4,18 @@ import {
   sendDirectMessage,
   sendGroupMessage,
   recallMessage,
+  uploadMessageImage,
 } from "../controllers/messageController.js";
 import {
   checkFriendship,
   checkGroupMembership,
 } from "../middlewares/friendMiddleware.js";
+import { upload } from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
+
+// Upload hình ảnh tin nhắn
+router.post("/upload", upload.single("file"), uploadMessageImage);
 
 // Gửi tin nhắn trực tiếp
 router.post("/direct", checkFriendship, sendDirectMessage);

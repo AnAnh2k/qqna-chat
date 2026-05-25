@@ -19,6 +19,7 @@ export interface Group {
 export interface LastMessage {
   _id: string;
   content: string;
+  imgUrl?: string | null;
   createdAt: string;
   sender: {
     _id: string;
