@@ -3,6 +3,8 @@ import { io, type Socket } from "socket.io-client";
 import { useAuthStore } from "./useAuthStore";
 import type { SocketState } from "@/types/store";
 import { useChatStore } from "./useChatStore";
+import { useFriendStore } from "./useFriendStore";
+import { toast } from "sonner";
 
 const baseURL = import.meta.env.VITE_SOCKET_URL;
 
@@ -78,6 +80,42 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     socket.on("new-group", (conversation) => {
       useChatStore.getState().addConvo(conversation);
       socket.emit("join-conversation", conversation._id);
+    });
+
+    // new friend request
+    socket.on("new-friend-request", (request) => {
+      useFriendStore.setState((state) => ({
+        receivedList: [request, ...state.receivedList],
+      }));
+      toast.success(`${request.from.displayName} đã gửi lời mời kết bạn!`);
+    });
+
+    // friend request accepted
+    socket.on("friend-request-accepted", ({ newFriend, requestId }) => {
+      useFriendStore.setState((state) => {
+        const exists = state.friends.some((f) => f._id === newFriend._id);
+        return {
+          friends: exists ? state.friends : [newFriend, ...state.friends],
+          receivedList: state.receivedList.filter((r) => r._id !== requestId),
+          sentList: state.sentList.filter((r) => r._id !== requestId),
+        };
+      });
+      toast.success(`${newFriend.displayName} và bạn đã trở thành bạn bè!`);
+    });
+
+    // friend request declined
+    socket.on("friend-request-declined", ({ requestId }) => {
+      useFriendStore.setState((state) => ({
+        receivedList: state.receivedList.filter((r) => r._id !== requestId),
+        sentList: state.sentList.filter((r) => r._id !== requestId),
+      }));
+    });
+
+    // unfriended
+    socket.on("unfriended", ({ friendId }) => {
+      useFriendStore.setState((state) => ({
+        friends: state.friends.filter((f) => f._id !== friendId),
+      }));
     });
   },
   disconnectSocket: () => {
