@@ -1,4 +1,13 @@
 import api from "@/lib/axios";
+import type { User } from "@/types/user";
+
+export type UpdateProfilePayload = Pick<
+  User,
+  "displayName" | "username" | "email"
+> & {
+  phone?: string;
+  bio?: string;
+};
 
 export const userService = {
   uploadAvatar: async (formData: FormData) => {
@@ -14,6 +23,10 @@ export const userService = {
   },
   getUserById: async (userId: string) => {
     const res = await api.get(`/users/${userId}`);
+    return res.data.user;
+  },
+  updateMe: async (payload: UpdateProfilePayload) => {
+    const res = await api.patch("/users/me", payload);
     return res.data.user;
   },
 };

@@ -65,6 +65,70 @@ export const uploadAvatar = async (req, res) => {
   }
 };
 
+export const updateMe = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { displayName, username, email, phone, bio } = req.body;
+
+    const updates = {};
+
+    if (displayName !== undefined) {
+      if (!displayName.trim()) {
+        return res.status(400).json({ message: "Họ và tên không được để trống" });
+      }
+      updates.displayName = displayName.trim();
+    }
+
+    if (username !== undefined) {
+      if (!username.trim()) {
+        return res.status(400).json({ message: "Tên người dùng không được để trống" });
+      }
+      const normalizedUsername = username.trim().toLowerCase();
+      const duplicateUsername = await User.findOne({
+        _id: { $ne: userId },
+        username: normalizedUsername,
+      });
+      if (duplicateUsername) {
+        return res.status(409).json({ message: "Tên người dùng đã tồn tại" });
+      }
+      updates.username = normalizedUsername;
+    }
+
+    if (email !== undefined) {
+      if (!email.trim()) {
+        return res.status(400).json({ message: "Email không được để trống" });
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+      const duplicateEmail = await User.findOne({
+        _id: { $ne: userId },
+        email: normalizedEmail,
+      });
+      if (duplicateEmail) {
+        return res.status(409).json({ message: "Email đã tồn tại" });
+      }
+      updates.email = normalizedEmail;
+    }
+
+    if (phone !== undefined) {
+      updates.phone = phone.trim();
+    }
+
+    if (bio !== undefined) {
+      updates.bio = bio.trim();
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updates, {
+      returnDocument: "after",
+      runValidators: true,
+    }).select("-hashedPassword");
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error("Lỗi xảy ra khi cập nhật thông tin cá nhân", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
 export const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;

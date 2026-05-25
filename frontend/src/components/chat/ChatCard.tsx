@@ -2,12 +2,14 @@ import { Card } from "@/components/ui/card";
 import { formatOnlineTime, cn } from "@/lib/utils";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useChatStore } from "@/stores/useChatStore";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ConfirmDialog from "../common/ConfirmDialog";
 
 interface ChatCardProps {
   convoId: string;
@@ -31,14 +33,16 @@ const ChatCard = ({
   subtitle,
 }: ChatCardProps) => {
   const { clearConversation } = useChatStore();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
-  const handleClear = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Ngăn sự kiện chọn thẻ chat
-    const confirmClear = window.confirm(
-      `Bạn có chắc chắn muốn xóa cuộc trò chuyện với "${name}"? Lịch sử tin nhắn sẽ bị xóa đối với bạn.`
-    );
-    if (confirmClear) {
+  const handleClear = async () => {
+    try {
+      setClearing(true);
       await clearConversation(convoId);
+      setConfirmOpen(false);
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -91,7 +95,10 @@ const ChatCard = ({
                 <DropdownMenuItem
                   variant="destructive"
                   className="cursor-pointer flex items-center gap-2"
-                  onClick={handleClear}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setConfirmOpen(true);
+                  }}
                 >
                   <Trash2 className="size-4" />
                   <span>Xóa trò chuyện</span>
@@ -101,6 +108,18 @@ const ChatCard = ({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Xóa trò chuyện"
+        description={`Bạn có chắc chắn muốn xóa cuộc trò chuyện với "${name}"? Lịch sử tin nhắn sẽ bị xóa đối với bạn.`}
+        confirmText="Xóa trò chuyện"
+        variant="destructive"
+        loading={clearing}
+        icon={Trash2}
+        onConfirm={handleClear}
+      />
     </Card>
   );
 };

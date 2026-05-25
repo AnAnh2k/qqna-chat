@@ -11,6 +11,7 @@ import PrivacySettings from "./PrivacySettings";
 import { Button } from "../ui/button";
 import { UserMinus } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmDialog from "../common/ConfirmDialog";
 
 interface ProfileDialogProps {
   open?: boolean;
@@ -32,6 +33,7 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
 
   const { friends, getFriends, unfriend } = useFriendStore();
   const [unfriendLoading, setUnfriendLoading] = useState(false);
+  const [unfriendConfirmOpen, setUnfriendConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && !isOwnProfile && displayUser) {
@@ -43,12 +45,11 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
 
   const handleUnfriend = async () => {
     if (!displayUser) return;
-    const confirm = window.confirm(`Bạn có chắc chắn muốn hủy kết bạn với ${displayUser.displayName}?`);
-    if (!confirm) return;
 
     try {
       setUnfriendLoading(true);
       await unfriend(displayUser._id);
+      setUnfriendConfirmOpen(false);
       toast.success("Hủy kết bạn thành công!");
     } catch (error) {
       toast.error("Không thể hủy kết bạn. Vui lòng thử lại!");
@@ -128,7 +129,7 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={handleUnfriend}
+                        onClick={() => setUnfriendConfirmOpen(true)}
                         disabled={unfriendLoading}
                         className="h-8 gap-1.5 text-xs bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-500/20 hover:border-transparent transition-all duration-300"
                       >
@@ -160,6 +161,20 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
                     </span>
                   </div>
                 </div>
+              )}
+
+              {!isOwnProfile && displayUser && (
+                <ConfirmDialog
+                  open={unfriendConfirmOpen}
+                  onOpenChange={setUnfriendConfirmOpen}
+                  title="Hủy kết bạn"
+                  description={`Bạn có chắc chắn muốn hủy kết bạn với ${displayUser.displayName}?`}
+                  confirmText="Hủy kết bạn"
+                  variant="destructive"
+                  loading={unfriendLoading}
+                  icon={UserMinus}
+                  onConfirm={handleUnfriend}
+                />
               )}
             </div>
           </div>

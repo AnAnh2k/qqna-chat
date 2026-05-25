@@ -1,4 +1,4 @@
-import { Bell, ChevronsUpDown, UserIcon } from "lucide-react";
+import { Bell, ChevronsUpDown, LogOut, UserIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -17,15 +17,34 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { User } from "@/types/user";
-import Logout from "../auth/Logout";
 import { useState } from "react";
 import FriendRequestDialog from "../friendRequest/FriendRequestDialog";
 import { useUserStore } from "@/stores/useUserStore";
+import ConfirmDialog from "../common/ConfirmDialog";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useNavigate } from "react-router";
 
 export function NavUser({ user }: { user: User }) {
   const { isMobile } = useSidebar();
   const [friendRequestOpen, setfriendRequestOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const { viewProfile } = useUserStore();
+  const { signOut } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      await signOut();
+      setLogoutConfirmOpen(false);
+      navigate("/signin");
+    } catch (error) {
+      console.error("Lỗi khi đăng xuất:", error);
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
 
   return (
     <>
@@ -87,8 +106,10 @@ export function NavUser({ user }: { user: User }) {
               <DropdownMenuItem
                 className="cursor-pointer"
                 variant="destructive"
+                onClick={() => setLogoutConfirmOpen(true)}
               >
-                <Logout />
+                <LogOut className="text-destructive" />
+                Đăng xuất
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -98,6 +119,18 @@ export function NavUser({ user }: { user: User }) {
       <FriendRequestDialog
         open={friendRequestOpen}
         setOpen={setfriendRequestOpen}
+      />
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Xác nhận đăng xuất"
+        description="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản hiện tại không?"
+        confirmText="Đăng xuất"
+        variant="destructive"
+        loading={logoutLoading}
+        icon={LogOut}
+        onConfirm={handleLogout}
       />
     </>
   );

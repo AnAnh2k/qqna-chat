@@ -10,6 +10,24 @@ export const useUserStore = create<UserState>((set) => ({
   profileModalOpen: false,
   profileLoading: false,
   setProfileModalOpen: (open) => set({ profileModalOpen: open }),
+  updateProfile: async (payload) => {
+    try {
+      const updatedUser = await userService.updateMe(payload);
+      useAuthStore.getState().setUser(updatedUser);
+      set((state) => ({
+        selectedProfileUser:
+          state.selectedProfileUser?._id === updatedUser._id
+            ? updatedUser
+            : state.selectedProfileUser,
+      }));
+      useChatStore.getState().fetchConversations();
+      toast.success("Cập nhật thông tin thành công!");
+    } catch (error) {
+      console.error("Lỗi khi updateProfile:", error);
+      toast.error("Cập nhật thông tin không thành công!");
+      throw error;
+    }
+  },
   viewProfile: async (userId) => {
     set({ profileModalOpen: true, profileLoading: true, selectedProfileUser: null });
     try {

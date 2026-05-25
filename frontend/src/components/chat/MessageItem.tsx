@@ -12,9 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, ImageIcon } from "lucide-react";
+import { MoreHorizontal, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import ConfirmDialog from "../common/ConfirmDialog";
 
 interface MessageItemProps {
   message: Message;
@@ -35,15 +36,19 @@ const MessageItem = ({
   const recallMessage = useChatStore((s) => s.recallMessage);
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [recallConfirmOpen, setRecallConfirmOpen] = useState(false);
+  const [recalling, setRecalling] = useState(false);
 
   const handleRecall = async () => {
-    const confirm = window.confirm("Bạn có chắc chắn muốn thu hồi tin nhắn này?");
-    if (!confirm) return;
     try {
+      setRecalling(true);
       await recallMessage(message._id);
+      setRecallConfirmOpen(false);
       toast.success("Thu hồi tin nhắn thành công");
     } catch (err) {
       toast.error("Không thể thu hồi tin nhắn. Vui lòng thử lại!");
+    } finally {
+      setRecalling(false);
     }
   };
 
@@ -220,7 +225,7 @@ const MessageItem = ({
                         className="w-28 min-w-[7rem]"
                       >
                         <DropdownMenuItem
-                          onClick={handleRecall}
+                          onClick={() => setRecallConfirmOpen(true)}
                           className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-xs gap-1.5"
                         >
                           <Undo2 className="size-3.5" />
@@ -250,6 +255,18 @@ const MessageItem = ({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={recallConfirmOpen}
+        onOpenChange={setRecallConfirmOpen}
+        title="Thu hồi tin nhắn"
+        description="Bạn có chắc chắn muốn thu hồi tin nhắn này không?"
+        confirmText="Thu hồi"
+        variant="destructive"
+        loading={recalling}
+        icon={Undo2}
+        onConfirm={handleRecall}
+      />
     </>
   );
 };

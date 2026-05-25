@@ -1,6 +1,7 @@
 import type { Socket } from "socket.io-client";
 import type { Conversation, Message } from "./chat";
 import type { Friend, FriendRequest, User } from "./user";
+import type { UpdateProfilePayload } from "@/services/userService";
 
 export interface AuthState {
   accessToken: string | null;
@@ -100,6 +101,7 @@ export interface UserState {
   selectedProfileUser: User | null;
   profileModalOpen: boolean;
   profileLoading: boolean;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
   updateAvatarUrl: (formData: FormData) => Promise<void>;
   viewProfile: (userId: string) => Promise<void>;
   setProfileModalOpen: (open: boolean) => void;
