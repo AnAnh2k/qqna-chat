@@ -59,6 +59,14 @@ export const chatService = {
     const res = await api.delete(`/conversations/${conversationId}/clear`);
     return res.data;
   },
+  async leaveGroup(conversationId: string) {
+    const res = await api.patch(`/conversations/${conversationId}/leave`);
+    return res.data.conversation;
+  },
+  async disbandGroup(conversationId: string) {
+    const res = await api.delete(`/conversations/${conversationId}/disband`);
+    return res.data;
+  },
   async createConversation(
     type: "direct" | "group",
     name: string,

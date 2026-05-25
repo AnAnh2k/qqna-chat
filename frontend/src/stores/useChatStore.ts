@@ -190,6 +190,23 @@ export const useChatStore = create<ChatState>()(
           };
         });
       },
+      removeConversation: (conversationId) => {
+        set((state) => {
+          const nextMessages = { ...state.messages };
+          delete nextMessages[conversationId];
+
+          return {
+            messages: nextMessages,
+            conversations: state.conversations.filter(
+              (c) => c._id !== conversationId,
+            ),
+            activeConversationId:
+              state.activeConversationId === conversationId
+                ? null
+                : state.activeConversationId,
+          };
+        });
+      },
       markAsSeen: async () => {
         try {
           const { user } = useAuthStore.getState();
@@ -294,6 +311,24 @@ export const useChatStore = create<ChatState>()(
             "Lỗi xảy ra khi gọi clearConversation trong store",
             error,
           );
+        }
+      },
+      leaveGroup: async (conversationId) => {
+        try {
+          await chatService.leaveGroup(conversationId);
+          get().removeConversation(conversationId);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi rời nhóm trong store", error);
+          throw error;
+        }
+      },
+      disbandGroup: async (conversationId) => {
+        try {
+          await chatService.disbandGroup(conversationId);
+          get().removeConversation(conversationId);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi giải tán nhóm trong store", error);
+          throw error;
         }
       },
       uploadMessageImage: async (file) => {

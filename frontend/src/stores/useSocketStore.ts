@@ -91,6 +91,15 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       socket.emit("join-conversation", conversation._id);
     });
 
+    socket.on("group-updated", (conversation) => {
+      useChatStore.getState().updateConversation(conversation);
+    });
+
+    socket.on("group-removed", ({ conversationId }) => {
+      socket.emit("leave-conversation", conversationId);
+      useChatStore.getState().removeConversation(conversationId);
+    });
+
     // message recalled
     socket.on("message-recalled", ({ messageId, conversationId }) => {
       useChatStore.getState().handleMessageRecalled(messageId, conversationId);

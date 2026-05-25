@@ -63,6 +63,7 @@ export interface ChatState {
   addMessage: (message: Message) => Promise<void>;
   // update convo
   updateConversation: (conversation: any) => void;
+  removeConversation: (conversationId: string) => void;
   markAsSeen: () => Promise<void>;
   addConvo: (convo: Conversation) => void;
   createConversation: (
@@ -71,6 +72,8 @@ export interface ChatState {
     memberIds: string[],
   ) => Promise<void>;
   clearConversation: (conversationId: string) => Promise<void>;
+  leaveGroup: (conversationId: string) => Promise<void>;
+  disbandGroup: (conversationId: string) => Promise<void>;
   uploadMessageImage: (file: File) => Promise<string>;
   recallMessage: (messageId: string) => Promise<void>;
   handleMessageRecalled: (messageId: string, conversationId: string) => void;

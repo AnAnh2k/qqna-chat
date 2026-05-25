@@ -41,6 +41,10 @@ io.on("connection", async (socket) => {
     socket.join(conversationId);
   });
 
+  socket.on("leave-conversation", (conversationId) => {
+    socket.leave(conversationId);
+  });
+
   socket.join(userIdStr);
 
   socket.on("disconnect", () => {
