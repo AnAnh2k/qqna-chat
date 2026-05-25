@@ -1,0 +1,1307 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "QQNA Chat API Documentation",
+    "version": "1.0.0",
+    "description": "Tài liệu đặc tả toàn bộ hệ thống API cho dự án ứng dụng nhắn tin QQNA Chat."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5001/api",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/auth/signup": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng ký tài khoản người dùng mới",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "user4" },
+                  "password": { "type": "string", "example": "123456" },
+                  "email": { "type": "string", "format": "email", "example": "user4@gmail.com" },
+                  "firstName": { "type": "string", "example": "User" },
+                  "lastName": { "type": "string", "example": "Bốn" }
+                },
+                "required": ["username", "password", "email", "firstName", "lastName"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Đăng ký thành công, không trả về dữ liệu"
+          },
+          "400": {
+            "description": "Thiếu các trường thông tin bắt buộc"
+          },
+          "409": {
+            "description": "Tên đăng nhập (username) đã tồn tại"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/auth/signin": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng nhập hệ thống",
+        "description": "Đăng nhập và nhận accessToken ở response body, đồng thời nhận refreshToken qua cookie.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string", "example": "user4" },
+                  "password": { "type": "string", "example": "123456" }
+                },
+                "required": ["username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng nhập thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "User Bốn User đã đăng nhập thành công" },
+                    "accessToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsIn..." }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu tên đăng nhập hoặc mật khẩu"
+          },
+          "401": {
+            "description": "Tên đăng nhập hoặc mật khẩu không chính xác"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/auth/signout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Đăng xuất khỏi hệ thống",
+        "description": "Xóa session trong database tương ứng với refreshToken gửi qua cookie, đồng thời xóa cookie trên trình duyệt.",
+        "responses": {
+          "204": {
+            "description": "Đăng xuất thành công"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Tạo accessToken mới từ refreshToken",
+        "description": "Đọc refreshToken từ cookie để cấp mới accessToken.",
+        "responses": {
+          "200": {
+            "description": "Cấp mới token thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsIn..." }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token không tồn tại, không hợp lệ hoặc đã hết hạn trong database"
+          },
+          "403": {
+            "description": "Refresh token đã quá hạn sử dụng"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Lấy thông tin tài khoản hiện tại",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Cập nhật thông tin tài khoản hiện tại",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": { "type": "string", "example": "User Bốn Mới" },
+                  "username": { "type": "string", "example": "user4new" },
+                  "email": { "type": "string", "format": "email", "example": "user4new@gmail.com" },
+                  "phone": { "type": "string", "example": "0987654321" },
+                  "bio": { "type": "string", "example": "Hello world, I'm new!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cập nhật thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Họ tên, tên người dùng hoặc email trống"
+          },
+          "409": {
+            "description": "Tên người dùng hoặc email đã tồn tại ở tài khoản khác"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/users/me/password": {
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Đổi mật khẩu tài khoản hiện tại",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": { "type": "string", "example": "123456" },
+                  "newPassword": { "type": "string", "example": "abcdef" }
+                },
+                "required": ["currentPassword", "newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đổi mật khẩu thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Đổi mật khẩu thành công" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu đầu vào không hợp lệ (thiếu mật khẩu, mật khẩu mới trùng mật khẩu cũ, mật khẩu mới ngắn hơn 6 ký tự hoặc mật khẩu hiện tại sai)"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/users/search": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Tìm kiếm người dùng theo username chính xác",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": true,
+            "description": "Username cần tìm",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kết quả tìm kiếm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "_id": { "type": "string", "example": "65b90f5c2..." },
+                        "username": { "type": "string", "example": "user4" },
+                        "displayName": { "type": "string", "example": "User Bốn" },
+                        "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu query username"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/users/uploadAvatar": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Tải lên ảnh đại diện cá nhân",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File ảnh đại diện (jpeg, png, v.v.)"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload ảnh thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "avatarUrl": { "type": "string", "example": "https://res.cloudinary.com/..." }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Không có file nào được upload hoặc avatar lưu vào DB bị lỗi null"
+          },
+          "500": {
+            "description": "Lỗi hệ thống hoặc upload ảnh thất bại"
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Lấy thông tin người dùng cụ thể bằng ID",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "ID của người dùng cần lấy thông tin",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thông tin người dùng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "_id": { "type": "string", "example": "65b90f5c2..." },
+                        "username": { "type": "string", "example": "user4" },
+                        "displayName": { "type": "string", "example": "User Bốn" },
+                        "email": { "type": "string", "example": "user4@gmail.com" },
+                        "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." },
+                        "bio": { "type": "string", "example": "My bio details" },
+                        "phone": { "type": "string", "example": "0987654321" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy người dùng"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/friends/": {
+      "get": {
+        "tags": ["Friends"],
+        "summary": "Lấy danh sách tất cả bạn bè",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách bạn bè",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "friends": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "_id": { "type": "string", "example": "65b90f5c2..." },
+                          "username": { "type": "string", "example": "user4" },
+                          "displayName": { "type": "string", "example": "User Bốn" },
+                          "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/friends/requests": {
+      "post": {
+        "tags": ["Friends"],
+        "summary": "Gửi lời mời kết bạn",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "to": { "type": "string", "description": "ID người dùng muốn kết bạn", "example": "65b90f5c2..." },
+                  "message": { "type": "string", "description": "Tin nhắn chào hỏi", "example": "Chào bạn, mình kết bạn nhé!" }
+                },
+                "required": ["to"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gửi lời mời thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "gửi lời mời kết bạn thành công" },
+                    "request": { "$ref": "#/components/schemas/FriendRequest" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Không thể gửi cho chính mình, hoặc hai người đã là bạn bè, hoặc đã có lời mời kết bạn đang chờ xử lý"
+          },
+          "404": {
+            "description": "Người nhận (to) không tồn tại"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Friends"],
+        "summary": "Lấy danh sách lời mời kết bạn",
+        "description": "Lấy danh sách lời mời kết bạn đã gửi và lời mời kết bạn nhận được.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách lời mời kết bạn",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sent": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/FriendRequest" }
+                    },
+                    "received": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/FriendRequest" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/friends/requests/{requestId}/accept": {
+      "post": {
+        "tags": ["Friends"],
+        "summary": "Chấp nhận lời mời kết bạn",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "description": "ID lời mời kết bạn cần chấp nhận",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chấp nhận kết bạn thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Chấp nhận lời mời kết bạn thành công" },
+                    "newFriend": {
+                      "type": "object",
+                      "properties": {
+                        "_id": { "type": "string", "example": "65b90f5c2..." },
+                        "displayName": { "type": "string", "example": "User Bốn" },
+                        "username": { "type": "string", "example": "user4" },
+                        "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Bạn không có quyền chấp nhận lời mời này (lời mời không gửi đến bạn)"
+          },
+          "404": {
+            "description": "Không tìm thấy lời mời kết bạn"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/friends/requests/{requestId}/decline": {
+      "post": {
+        "tags": ["Friends"],
+        "summary": "Từ chối lời mời kết bạn",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "description": "ID lời mời kết bạn cần từ chối",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Từ chối lời mời kết bạn thành công"
+          },
+          "403": {
+            "description": "Bạn không có quyền từ chối lời mời này (lời mời không gửi đến bạn)"
+          },
+          "404": {
+            "description": "Không tìm thấy lời mời kết bạn"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/friends/{friendId}": {
+      "delete": {
+        "tags": ["Friends"],
+        "summary": "Hủy kết bạn với một người dùng",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "friendId",
+            "in": "path",
+            "required": true,
+            "description": "ID của người bạn muốn hủy kết bạn",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hủy kết bạn thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Hủy kết bạn thành công" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hai người chưa từng kết bạn"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/messages/upload": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Tải lên hình ảnh tin nhắn lên Cloudinary",
+        "description": "Lưu trữ hình ảnh tin nhắn để nhận về URL dùng làm hình ảnh khi gửi tin nhắn chat.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "File hình ảnh cần gửi"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload ảnh thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imgUrl": { "type": "string", "example": "https://res.cloudinary.com/..." }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Không tìm thấy file tải lên"
+          },
+          "500": {
+            "description": "Lỗi hệ thống hoặc upload ảnh thất bại"
+          }
+        }
+      }
+    },
+    "/messages/direct": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Gửi tin nhắn trực tiếp 1-1",
+        "description": "Gửi tin nhắn văn bản hoặc/và hình ảnh tới một người dùng. Nếu chưa tồn tại cuộc hội thoại, hệ thống sẽ tự động tạo cuộc hội thoại mới.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipientId": { "type": "string", "example": "65b90f5c2..." },
+                  "content": { "type": "string", "example": "Chào bạn!" },
+                  "conversationId": { "type": "string", "description": "ID cuộc trò chuyện (nếu có để tối ưu tìm kiếm)", "example": "65b90f673..." },
+                  "imgUrl": { "type": "string", "description": "URL hình ảnh (nếu gửi ảnh)", "example": "https://res.cloudinary.com/..." }
+                },
+                "required": ["recipientId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gửi tin nhắn thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "$ref": "#/components/schemas/Message" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu nội dung tin nhắn và hình ảnh"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/messages/group": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Gửi tin nhắn vào nhóm chat",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conversationId": { "type": "string", "example": "65b90f673..." },
+                  "content": { "type": "string", "example": "Chào mọi người!" },
+                  "imgUrl": { "type": "string", "description": "URL hình ảnh tin nhắn (nếu có)", "example": "https://res.cloudinary.com/..." },
+                  "mentionedUserIds": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Danh sách các User ID được mention trong nhóm",
+                    "example": ["65b90f5c2..."]
+                  }
+                },
+                "required": ["conversationId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gửi tin nhắn thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "$ref": "#/components/schemas/Message" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu nội dung tin nhắn và hình ảnh"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/messages/{messageId}": {
+      "delete": {
+        "tags": ["Messages"],
+        "summary": "Thu hồi một tin nhắn",
+        "description": "Người gửi có quyền thu hồi tin nhắn của bản thân. Nội dung tin nhắn sẽ bị xóa trống, imgUrl bị gỡ bỏ và cờ isRecalled được set thành true.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "description": "ID tin nhắn cần thu hồi",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thu hồi thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Thu hồi tin nhắn thành công" },
+                    "recalledMessage": { "$ref": "#/components/schemas/Message" }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Bạn không có quyền thu hồi tin nhắn của người khác"
+          },
+          "404": {
+            "description": "Không tìm thấy tin nhắn"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/": {
+      "post": {
+        "tags": ["Conversations"],
+        "summary": "Tạo cuộc hội thoại mới (Trực tiếp hoặc Nhóm)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["direct", "group"], "example": "group" },
+                  "name": { "type": "string", "description": "Tên nhóm (bắt buộc nếu type=group)", "example": "Hội đồng niên" },
+                  "memberIds": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Danh sách các User ID là thành viên (đối với group, không bao gồm người tạo; đối với direct, chỉ chứa 1 ID người nhận)",
+                    "example": ["65b90f5c2..."]
+                  }
+                },
+                "required": ["type", "memberIds"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tạo cuộc hội thoại thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversation": { "$ref": "#/components/schemas/Conversation" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu đầu vào không hợp lệ hoặc thiếu tên nhóm/thành viên"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Conversations"],
+        "summary": "Lấy danh sách cuộc hội thoại của tài khoản hiện tại",
+        "description": "Danh sách được sắp xếp theo thời gian của tin nhắn cuối cùng mới nhất.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách cuộc hội thoại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversations": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Conversation" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/messages": {
+      "get": {
+        "tags": ["Conversations"],
+        "summary": "Lấy danh sách tin nhắn trong một cuộc hội thoại (Phân trang)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "description": "ID cuộc hội thoại cần lấy tin nhắn",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Số lượng tin nhắn tối đa cần lấy (mặc định 50)",
+            "schema": { "type": "integer", "default": 50 }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Mốc thời gian (ISO String) của tin nhắn để phân trang tải thêm (chỉ lấy các tin nhắn cũ hơn cursor)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách tin nhắn",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "messages": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Message" }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Cursor tiếp theo để phân trang (là thời gian gửi của tin nhắn cũ nhất trong danh sách hiện tại)",
+                      "example": "2026-05-25T08:00:00.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuộc trò chuyện không tồn tại hoặc bạn không phải thành viên cuộc trò chuyện"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/seen": {
+      "patch": {
+        "tags": ["Conversations"],
+        "summary": "Đánh dấu đã xem toàn bộ tin nhắn trong cuộc hội thoại",
+        "description": "Xóa số lượng tin nhắn chưa đọc đối với người dùng hiện tại và thêm người dùng vào mảng seenBy của tin nhắn cuối cùng.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "description": "ID cuộc hội thoại cần đánh dấu đã xem",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cập nhật trạng thái xem thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Marked as seen" },
+                    "seenBy": { "type": "array", "items": { "type": "string" }, "example": ["65b90f5c2..."] },
+                    "myUnreadCount": { "type": "integer", "example": 0 }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuộc hội thoại không tồn tại"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/members": {
+      "patch": {
+        "tags": ["Conversations"],
+        "summary": "Thêm thành viên mới vào nhóm chat",
+        "description": "Chỉ áp dụng cho cuộc hội thoại nhóm. Chỉ có thể thêm những người dùng đã kết bạn với người thực hiện thao tác.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "description": "ID nhóm chat cần thêm thành viên",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memberIds": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Mảng các ID người dùng muốn thêm vào nhóm",
+                    "example": ["65b90f5c3...", "65b90f5c4..."]
+                  }
+                },
+                "required": ["memberIds"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thêm thành viên thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversation": { "$ref": "#/components/schemas/Conversation" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lỗi tham số hoặc thành viên được thêm đã ở trong nhóm"
+          },
+          "403": {
+            "description": "Không được thêm người chưa kết bạn vào nhóm"
+          },
+          "404": {
+            "description": "Nhóm chat không tồn tại hoặc người thực hiện không phải là thành viên nhóm"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/leave": {
+      "patch": {
+        "tags": ["Conversations"],
+        "summary": "Rời khỏi nhóm chat",
+        "description": "Thành viên rời nhóm sẽ bị xóa khỏi danh sách participants. Trưởng nhóm (createdBy) không thể rời trực tiếp mà chỉ có thể giải tán nhóm.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "description": "ID nhóm chat muốn rời",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rời nhóm thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversation": { "$ref": "#/components/schemas/Conversation" }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Trưởng nhóm không được quyền rời nhóm, vui lòng giải tán nhóm"
+          },
+          "404": {
+            "description": "Nhóm không tồn tại hoặc người dùng không phải thành viên nhóm"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/clear": {
+      "delete": {
+        "tags": ["Conversations"],
+        "summary": "Xóa lịch sử tin nhắn cuộc hội thoại đối với bản thân",
+        "description": "Đánh dấu thời gian đã xóa (`clearedAt`) cho thành viên hiện tại. Sau mốc này, người dùng sẽ không thấy các tin nhắn cũ trước đó nữa.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "description": "ID cuộc hội thoại cần xóa lịch sử",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa lịch sử thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Đã xóa lịch sử cuộc trò chuyện thành công" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cuộc trò chuyện không tồn tại hoặc bạn không phải thành viên"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/disband": {
+      "delete": {
+        "tags": ["Conversations"],
+        "summary": "Giải tán nhóm chat",
+        "description": "Chỉ trưởng nhóm mới có quyền thực hiện. Xóa toàn bộ tin nhắn thuộc nhóm và bản ghi cuộc hội thoại.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "description": "ID nhóm chat cần giải tán",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Giải tán nhóm thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Đã giải tán nhóm" }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ trưởng nhóm mới có thể giải tán nhóm"
+          },
+          "404": {
+            "description": "Nhóm không tồn tại hoặc bạn không phải thành viên"
+          },
+          "500": {
+            "description": "Lỗi hệ thống"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "65b90f5c2..." },
+          "username": { "type": "string", "example": "user4" },
+          "displayName": { "type": "string", "example": "User Bốn" },
+          "email": { "type": "string", "format": "email", "example": "user4@gmail.com" },
+          "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." },
+          "phone": { "type": "string", "example": "0987654321", "nullable": true },
+          "bio": { "type": "string", "example": "My bio details", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" },
+          "updatedAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" }
+        }
+      },
+      "FriendRequest": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "65b90f890..." },
+          "from": {
+            "type": "object",
+            "properties": {
+              "_id": { "type": "string", "example": "65b90f5c1..." },
+              "displayName": { "type": "string", "example": "User Gửi" },
+              "username": { "type": "string", "example": "usersend" },
+              "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+            }
+          },
+          "to": {
+            "type": "object",
+            "properties": {
+              "_id": { "type": "string", "example": "65b90f5c2..." },
+              "displayName": { "type": "string", "example": "User Nhận" },
+              "username": { "type": "string", "example": "userreceive" },
+              "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+            }
+          },
+          "message": { "type": "string", "example": "Kết bạn nhé!" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" },
+          "updatedAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "65b90faaa..." },
+          "conversationId": { "type": "string", "example": "65b90f673..." },
+          "senderId": { "type": "string", "example": "65b90f5c2..." },
+          "content": { "type": "string", "example": "Chào bạn nhé!" },
+          "imgUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." },
+          "isRecalled": { "type": "boolean", "example": false },
+          "mentions": { "type": "array", "items": { "type": "string" }, "example": [] },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" },
+          "updatedAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" }
+        }
+      },
+      "Conversation": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "65b90f673..." },
+          "type": { "type": "string", "enum": ["direct", "group"], "example": "group" },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_id": { "type": "string", "example": "65b90f5c2..." },
+                "displayName": { "type": "string", "example": "User Bốn" },
+                "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." },
+                "joinedAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" }
+              }
+            }
+          },
+          "lastMessage": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "_id": { "type": "string", "example": "65b90faaa..." },
+              "content": { "type": "string", "example": "Chào bạn nhé!" },
+              "imgUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." },
+              "createdAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" },
+              "sender": {
+                "type": "object",
+                "properties": {
+                  "_id": { "type": "string", "example": "65b90f5c2..." },
+                  "displayName": { "type": "string", "example": "User Bốn" },
+                  "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+                }
+              }
+            }
+          },
+          "lastMessageAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" },
+          "unreadCounts": {
+            "type": "object",
+            "additionalProperties": { "type": "integer" },
+            "example": { "65b90f5c2...": 2 }
+          },
+          "seenBy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "_id": { "type": "string", "example": "65b90f5c2..." },
+                "displayName": { "type": "string", "example": "User Bốn" },
+                "avatarUrl": { "type": "string", "nullable": true, "example": "https://res.cloudinary.com/..." }
+              }
+            }
+          },
+          "group": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "name": { "type": "string", "example": "Hội đồng niên" },
+              "createdBy": { "type": "string", "example": "65b90f5c2..." }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" },
+          "updatedAt": { "type": "string", "format": "date-time", "example": "2026-05-25T08:00:00.000Z" }
+        }
+      }
+    }
+  }
+}

@@ -12,6 +12,16 @@ import conversationRoute from "./routes/conversationRoute.js";
 import express from "express";
 import { app, server, io } from "./socket/index.js";
 import { v2 as cloudinary } from 'cloudinary';
+import swaggerUi from "swagger-ui-express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const swaggerDocument = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "swagger.json"), "utf8")
+);
 
 dotenv.config();
 
@@ -46,6 +56,7 @@ cloudinary.config({
 app.get("/api/ping", (req, res) => {
   res.status(200).json({ message: "pong" });
 });
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api/auth", authRoute);
 
 //private routes
