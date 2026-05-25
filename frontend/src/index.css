@@ -212,6 +212,23 @@
   body {
     @apply text-slate-800 dark:text-slate-200 bg-background;
   }
+
+  button,
+  [role="button"],
+  select,
+  a,
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-trigger"] {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  button[disabled] {
+    cursor: not-allowed;
+  }
 }
 
 /* Chat App Utility Classes */
