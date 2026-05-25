@@ -46,7 +46,7 @@ const MessageItem = ({
   };
 
   const isShowTime =
-    index === 0 ||
+    index === messages.length - 1 ||
     new Date(message.createdAt).getTime() -
       new Date(prev?.createdAt || 0).getTime() >
       300000; // 5 phút
