@@ -93,5 +93,10 @@ export interface FriendState {
 }
 
 export interface UserState {
+  selectedProfileUser: User | null;
+  profileModalOpen: boolean;
+  profileLoading: boolean;
   updateAvatarUrl: (formData: FormData) => Promise<void>;
+  viewProfile: (userId: string) => Promise<void>;
+  setProfileModalOpen: (open: boolean) => void;
 }

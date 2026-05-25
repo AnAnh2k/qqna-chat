@@ -12,4 +12,8 @@ export const userService = {
 
     return res.data;
   },
+  getUserById: async (userId: string) => {
+    const res = await api.get(`/users/${userId}`);
+    return res.data.user;
+  },
 };

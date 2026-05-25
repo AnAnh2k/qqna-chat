@@ -5,7 +5,22 @@ import { useAuthStore } from "./useAuthStore";
 import { toast } from "sonner";
 import { useChatStore } from "./useChatStore";
 
-export const useUserStore = create<UserState>((set, get) => ({
+export const useUserStore = create<UserState>((set) => ({
+  selectedProfileUser: null,
+  profileModalOpen: false,
+  profileLoading: false,
+  setProfileModalOpen: (open) => set({ profileModalOpen: open }),
+  viewProfile: async (userId) => {
+    set({ profileModalOpen: true, profileLoading: true, selectedProfileUser: null });
+    try {
+      const user = await userService.getUserById(userId);
+      set({ selectedProfileUser: user, profileLoading: false });
+    } catch (error) {
+      console.error("Lỗi khi viewProfile:", error);
+      toast.error("Không thể tải thông tin người dùng!");
+      set({ profileLoading: false, profileModalOpen: false });
+    }
+  },
   updateAvatarUrl: async (formData) => {
     try {
       const { user, setUser } = useAuthStore.getState();
