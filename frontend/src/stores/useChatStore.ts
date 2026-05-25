@@ -5,6 +5,21 @@ import { persist } from "zustand/middleware";
 import { useAuthStore } from "./useAuthStore";
 import { useSocketStore } from "./useSocketStore";
 
+const getConversationTime = (conversation: any) => {
+  const timestamp =
+    conversation.lastMessageAt ??
+    conversation.lastMessage?.createdAt ??
+    conversation.updatedAt ??
+    conversation.createdAt;
+
+  return timestamp ? new Date(timestamp).getTime() : 0;
+};
+
+const sortConversationsByLatest = (conversations: any[]) =>
+  [...conversations].sort(
+    (a, b) => getConversationTime(b) - getConversationTime(a),
+  );
+
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
@@ -30,7 +45,10 @@ export const useChatStore = create<ChatState>()(
           set({ convoLoading: true });
           const { conversations } = await chatService.fetchConversations();
 
-          set({ conversations, convoLoading: false });
+          set({
+            conversations: sortConversationsByLatest(conversations),
+            convoLoading: false,
+          });
         } catch (error) {
           console.error("Lỗi xảy ra khi fetchConversations:", error);
           set({ convoLoading: false });
@@ -152,11 +170,25 @@ export const useChatStore = create<ChatState>()(
         }
       },
       updateConversation: (conversation) => {
-        set((state) => ({
-          conversations: state.conversations.map((c) =>
-            c._id === conversation._id ? { ...c, ...conversation } : c,
-          ),
-        }));
+        set((state) => {
+          const existingConversation = state.conversations.find(
+            (c) => c._id === conversation._id,
+          );
+
+          const updatedConversation = existingConversation
+            ? { ...existingConversation, ...conversation }
+            : conversation;
+
+          const nextConversations = existingConversation
+            ? state.conversations.map((c) =>
+                c._id === conversation._id ? updatedConversation : c,
+              )
+            : [updatedConversation, ...state.conversations];
+
+          return {
+            conversations: sortConversationsByLatest(nextConversations),
+          };
+        });
       },
       markAsSeen: async () => {
         try {
@@ -287,7 +319,8 @@ export const useChatStore = create<ChatState>()(
           );
 
           // Cập nhật tin nhắn cuối cùng trên sidebar nếu tin nhắn bị thu hồi là tin nhắn cuối cùng
-          const conversations = state.conversations.map((convo) => {
+          const conversations = sortConversationsByLatest(
+            state.conversations.map((convo) => {
             if (
               convo._id === conversationId &&
               convo.lastMessage?._id === messageId
@@ -301,7 +334,8 @@ export const useChatStore = create<ChatState>()(
               };
             }
             return convo;
-          });
+            }),
+          );
 
           return {
             messages: {
