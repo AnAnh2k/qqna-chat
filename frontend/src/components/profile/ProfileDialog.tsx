@@ -1,12 +1,16 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import ProfileCard from "./ProfileCard";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
+import { useFriendStore } from "@/stores/useFriendStore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import PersonalInfoForm from "./PersonalInfoForm";
 import PreferencesForm from "./PreferencesForm";
 import PrivacySettings from "./PrivacySettings";
+import { Button } from "../ui/button";
+import { UserMinus } from "lucide-react";
+import { toast } from "sonner";
 
 interface ProfileDialogProps {
   open?: boolean;
@@ -25,6 +29,33 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
 
   const displayUser = open !== undefined ? currentUser : selectedUser;
   const isOwnProfile = currentUser?._id === displayUser?._id;
+
+  const { friends, getFriends, unfriend } = useFriendStore();
+  const [unfriendLoading, setUnfriendLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && !isOwnProfile && displayUser) {
+      getFriends();
+    }
+  }, [isOpen, isOwnProfile, displayUser, getFriends]);
+
+  const isFriend = displayUser ? friends.some((f) => f._id === displayUser._id) : false;
+
+  const handleUnfriend = async () => {
+    if (!displayUser) return;
+    const confirm = window.confirm(`Bạn có chắc chắn muốn hủy kết bạn với ${displayUser.displayName}?`);
+    if (!confirm) return;
+
+    try {
+      setUnfriendLoading(true);
+      await unfriend(displayUser._id);
+      toast.success("Hủy kết bạn thành công!");
+    } catch (error) {
+      toast.error("Không thể hủy kết bạn. Vui lòng thử lại!");
+    } finally {
+      setUnfriendLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -89,9 +120,23 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
                 </Tabs>
               ) : (
                 <div className="mt-6 p-6 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-xl border border-violet-100 dark:border-slate-800 space-y-4 text-slate-850 dark:text-slate-200">
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100 border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
-                    Thông tin tài khoản
-                  </h3>
+                  <div className="flex justify-between items-center border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                      Thông tin tài khoản
+                    </h3>
+                    {isFriend && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleUnfriend}
+                        disabled={unfriendLoading}
+                        className="h-8 gap-1.5 text-xs bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-500/20 hover:border-transparent transition-all duration-300"
+                      >
+                        <UserMinus className="size-3.5" />
+                        Hủy kết bạn
+                      </Button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="text-muted-foreground">Tên đăng nhập:</span>
                     <span className="col-span-2 font-medium">@{displayUser.username}</span>

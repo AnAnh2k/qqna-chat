@@ -2,7 +2,7 @@ import { friendService } from "@/services/friendService";
 import type { FriendState } from "@/types/store";
 import { create } from "zustand";
 
-export const useFriendStore = create<FriendState>((set, get) => ({
+export const useFriendStore = create<FriendState>((set) => ({
   friends: [],
   loading: false,
   receivedList: [],
@@ -86,6 +86,20 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     } catch (error) {
       console.error("Lỗi xảy ra khi load friends", error);
       set({ friends: [] });
+    } finally {
+      set({ loading: false });
+    }
+  },
+  unfriend: async (friendId) => {
+    try {
+      set({ loading: true });
+      await friendService.unfriend(friendId);
+      set((state) => ({
+        friends: state.friends.filter((f) => f._id !== friendId),
+      }));
+    } catch (error) {
+      console.error("Lỗi xảy ra khi unfriend", error);
+      throw error;
     } finally {
       set({ loading: false });
     }

@@ -61,7 +61,7 @@ export interface ChatState {
   // add message
   addMessage: (message: Message) => Promise<void>;
   // update convo
-  updateConversation: (conversation: unknown) => void;
+  updateConversation: (conversation: any) => void;
   markAsSeen: () => Promise<void>;
   addConvo: (convo: Conversation) => void;
   createConversation: (
@@ -90,6 +90,7 @@ export interface FriendState {
   acceptRequest: (requestId: string) => Promise<void>;
   declineRequest: (requestId: string) => Promise<void>;
   getFriends: () => Promise<void>;
+  unfriend: (friendId: string) => Promise<void>;
 }
 
 export interface UserState {
