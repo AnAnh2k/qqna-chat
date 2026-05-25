@@ -10,7 +10,7 @@ const GuestRoute = () => {
     // Tự động thử làm mới token khi tải lại trang để kiểm tra xem đã đăng nhập chưa
     if (!accessToken) {
       try {
-        await refresh();
+        await refresh({ silent: true });
       } catch {
         // Bỏ qua nếu không có refresh token hợp lệ
       }

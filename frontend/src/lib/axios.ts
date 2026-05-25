@@ -29,6 +29,7 @@ api.interceptors.response.use(
     if (
       originalRequest.url.includes("/auth/signin") ||
       originalRequest.url.includes("/auth/signup") ||
+      originalRequest.url.includes("/auth/signout") ||
       originalRequest.url.includes("/auth/refresh")
     ) {
       return Promise.reject(error);

@@ -72,14 +72,13 @@ export const useAuthStore = create<AuthState>()(
       },
       signOut: async () => {
         try {
-          get().clearState();
           await authService.signOut();
-          toast.success("Đăng xuất thành công!");
         } catch (error) {
           console.error("Lỗi khi đăng xuất:", error);
-          toast.error("Đăng xuất không thành công. Vui lòng thử lại.");
-          throw error;
+        } finally {
+          get().clearState();
         }
+        toast.success("Đăng xuất thành công!");
       },
 
       fetchMe: async () => {
@@ -96,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      refresh: async () => {
+      refresh: async (options) => {
         try {
           set({ loading: true });
           const { user, fetchMe } = get();
@@ -109,7 +108,9 @@ export const useAuthStore = create<AuthState>()(
           return accessToken;
         } catch (error) {
           console.error("Lỗi khi refresh token:", error);
-          toast.error("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!");
+          if (!options?.silent) {
+            toast.error("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại!");
+          }
           get().clearState();
         } finally {
           set({ loading: false });

@@ -6,6 +6,11 @@ import Session from "../models/Session.js";
 
 const ACCESS_TOKEN_TTL = "30m"; // thường là dưới 15p
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000; //14 ngày
+const REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true, // chỉ gửi cookie qua HTTPS
+  sameSite: "none", // cho phép gửi cookie khi frontend/backend khác origin
+};
 
 export const signUp = async (req, res) => {
   try {
@@ -92,9 +97,7 @@ export const signIn = async (req, res) => {
 
     // trả refresh token về trong cookie
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true, // chỉ gửi cookie qua HTTPS
-      sameSite: "none", // ngăn chặn CSRF
+      ...REFRESH_COOKIE_OPTIONS,
       maxAge: REFRESH_TOKEN_TTL,
     });
 
@@ -118,7 +121,7 @@ export const signOut = async (req, res) => {
       await Session.findOneAndDelete({ refreshToken });
 
       //xóa cookie refresh token
-      res.clearCookie("refreshToken");
+      res.clearCookie("refreshToken", REFRESH_COOKIE_OPTIONS);
     }
 
     return res.sendStatus(204);
