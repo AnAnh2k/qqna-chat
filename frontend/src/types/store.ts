@@ -58,6 +58,7 @@ export interface ChatState {
     conversationId: string,
     content: string,
     imgUrl?: string,
+    mentionedUserIds?: string[],
   ) => Promise<void>;
   // add message
   addMessage: (message: Message) => Promise<void>;

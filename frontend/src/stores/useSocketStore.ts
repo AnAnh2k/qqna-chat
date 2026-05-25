@@ -95,6 +95,13 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       useChatStore.getState().updateConversation(conversation);
     });
 
+    socket.on("mention-notification", ({ senderName, conversationName }) => {
+      toast.info(
+        `${senderName} đã nhắc đến bạn trong cuộc trò chuyện ${conversationName}`,
+        { duration: Infinity },
+      );
+    });
+
     socket.on("group-removed", ({ conversationId }) => {
       socket.emit("leave-conversation", conversationId);
       useChatStore.getState().removeConversation(conversationId);

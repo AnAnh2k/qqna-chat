@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/stores/useAuthStore";
-import type { Conversation } from "@/types/chat";
+import type { Conversation, Participant } from "@/types/chat";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { ImagePlus, Send, UserPlus, X, Loader2 } from "lucide-react";
@@ -19,23 +19,56 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const imagePreviewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     getFriends();
   }, [getFriends]);
 
-  // Generate preview when image changes
   useEffect(() => {
-    if (!selectedImage) {
-      setImagePreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(selectedImage);
-    setImagePreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [selectedImage]);
+    return () => {
+      if (imagePreviewUrlRef.current) {
+        URL.revokeObjectURL(imagePreviewUrlRef.current);
+      }
+    };
+  }, []);
 
   if (!user) return null;
+
+  const mentionableMembers =
+    selectedConvo.type === "group"
+      ? selectedConvo.participants.filter((member) => member._id !== user._id)
+      : [];
+
+  const mentionMatch = value.match(/(?:^|\s)@([^\s@]*)$/);
+  const mentionQuery = mentionMatch?.[1]?.toLowerCase() ?? "";
+  const showMentionSuggestions =
+    selectedConvo.type === "group" && mentionMatch !== null;
+  const mentionSuggestions = showMentionSuggestions
+    ? mentionableMembers
+        .filter((member) =>
+          member.displayName.toLowerCase().includes(mentionQuery),
+        )
+        .slice(0, 5)
+    : [];
+
+  const getMentionedUserIds = (content: string) => {
+    const lowerContent = content.toLowerCase();
+
+    return mentionableMembers
+      .filter((member) =>
+        lowerContent.includes(`@${member.displayName.toLowerCase()}`),
+      )
+      .map((member) => member._id);
+  };
+
+  const insertMention = (member: Participant) => {
+    setValue((current) =>
+      current.replace(/(^|\s)@([^\s@]*)$/, `$1@${member.displayName} `),
+    );
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
 
   // Kiểm tra quan hệ bạn bè đối với hội thoại tin nhắn riêng (1v1)
   if (selectedConvo.type === "direct") {
@@ -55,9 +88,24 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   }
 
   const clearImage = () => {
+    if (imagePreviewUrlRef.current) {
+      URL.revokeObjectURL(imagePreviewUrlRef.current);
+      imagePreviewUrlRef.current = null;
+    }
     setSelectedImage(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const setImageWithPreview = (file: File) => {
+    if (imagePreviewUrlRef.current) {
+      URL.revokeObjectURL(imagePreviewUrlRef.current);
+    }
+
+    const url = URL.createObjectURL(file);
+    imagePreviewUrlRef.current = url;
+    setSelectedImage(file);
+    setImagePreview(url);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,7 +115,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
       toast.error("Chỉ chấp nhận file ảnh!");
       return;
     }
-    setSelectedImage(file);
+    setImageWithPreview(file);
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -76,7 +124,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     for (const item of Array.from(items)) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
-        if (file) setSelectedImage(file);
+        if (file) setImageWithPreview(file);
         break;
       }
     }
@@ -106,7 +154,12 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         )[0];
         await sendDirectMessage(otherUser._id, currValue, imgUrl);
       } else {
-        await sendGroupMessage(selectedConvo._id, currValue, imgUrl);
+        await sendGroupMessage(
+          selectedConvo._id,
+          currValue,
+          imgUrl,
+          getMentionedUserIds(currValue),
+        );
       }
     } catch (error) {
       console.error(error);
@@ -169,6 +222,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
 
         <div className="flex-1 relative">
           <Input
+            ref={inputRef}
             onKeyPress={handleKeyPress}
             onPaste={handlePaste}
             value={value}
@@ -176,6 +230,23 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
             placeholder="Soạn tin nhắn..."
             className="pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none"
           />
+          {mentionSuggestions.length > 0 && (
+            <div className="absolute bottom-11 left-0 z-20 w-64 overflow-hidden rounded-md border border-border bg-popover shadow-md">
+              {mentionSuggestions.map((member) => (
+                <button
+                  key={member._id}
+                  type="button"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    insertMention(member);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                >
+                  <span className="font-medium">{member.displayName}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
             <EmojiPicker
               onChange={(emoji: string) => setValue(`${value}${emoji}`)}

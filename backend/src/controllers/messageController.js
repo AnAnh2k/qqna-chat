@@ -56,7 +56,7 @@ export const sendDirectMessage = async (req, res) => {
 
 export const sendGroupMessage = async (req, res) => {
   try {
-    const { conversationId, content, imgUrl } = req.body;
+    const { conversationId, content, imgUrl, mentionedUserIds = [] } = req.body;
     const senderId = req.user._id;
     const conversation = req.conversation;
 
@@ -64,17 +64,45 @@ export const sendGroupMessage = async (req, res) => {
       return res.status(400).json("Thiếu nội dung hoặc hình ảnh");
     }
 
+    const participantIds = new Set(
+      conversation.participants.map((p) => p.userId.toString()),
+    );
+    const mentions = [
+      ...new Set(
+        mentionedUserIds
+          .map((id) => id?.toString())
+          .filter(
+            (id) =>
+              id &&
+              id !== senderId.toString() &&
+              participantIds.has(id),
+          ),
+      ),
+    ];
+
     const message = await Message.create({
       conversationId,
       senderId,
       content: content || "",
       imgUrl: imgUrl || undefined,
+      mentions,
     });
 
     updateConversationAfterCreateMessage(conversation, message, senderId);
 
     await conversation.save();
     emitNewMessage(io, conversation, message);
+
+    const conversationName = conversation.group?.name || "nhóm";
+    mentions.forEach((mentionedUserId) => {
+      io.to(mentionedUserId).emit("mention-notification", {
+        conversationId: conversation._id,
+        conversationName,
+        senderId,
+        senderName: req.user.displayName,
+        messageId: message._id,
+      });
+    });
 
     return res.status(201).json({ message });
   } catch (error) {

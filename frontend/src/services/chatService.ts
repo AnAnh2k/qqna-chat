@@ -42,11 +42,13 @@ export const chatService = {
     conversationId: string,
     content: string = "",
     imgUrl?: string,
+    mentionedUserIds: string[] = [],
   ) {
     const res = await api.post("/messages/group", {
       conversationId,
       content,
       imgUrl,
+      mentionedUserIds,
     });
     return res.data.message;
   },
