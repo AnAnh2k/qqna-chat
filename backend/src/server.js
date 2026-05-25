@@ -35,7 +35,7 @@ app.use(
   cors({
     origin: (origin, callback) => {
       // Cho phép requests không có origin (như postman, curl) hoặc bất kỳ cổng localhost nào
-      if (!origin || origin.startsWith("http://localhost:5173") || allowedOrigins.includes(origin)) {
+      if (!origin || origin.startsWith("http://localhost:") || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Blocked by CORS"));
