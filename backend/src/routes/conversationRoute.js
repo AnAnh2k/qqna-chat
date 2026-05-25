@@ -5,6 +5,7 @@ import {
   getConversations,
   getMessages,
   markAsSeen,
+  clearConversation,
 } from "../controllers/conversationController.js";
 import { checkFriendship } from "../middlewares/friendMiddleware.js";
 
@@ -14,5 +15,6 @@ router.post("/", checkFriendship, createConversation);
 router.get("/", getConversations);
 router.get("/:conversationId/messages", getMessages);
 router.patch("/:conversationId/seen", markAsSeen);
+router.delete("/:conversationId/clear", clearConversation);
 
 export default router;

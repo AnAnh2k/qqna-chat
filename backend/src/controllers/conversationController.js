@@ -115,6 +115,19 @@ export const getConversations = async (req, res) => {
       });
 
     const formatted = conversations.map((convo) => {
+      const participant = convo.participants.find(
+        (p) => p.userId?._id.toString() === userId.toString()
+      );
+
+      let isCleared = false;
+      if (participant?.clearedAt) {
+        if (!convo.lastMessageAt) {
+          isCleared = true;
+        } else {
+          isCleared = new Date(convo.lastMessageAt) <= new Date(participant.clearedAt);
+        }
+      }
+
       const participants = (convo.participants || []).map((p) => ({
         _id: p.userId?._id,
         displayName: p.userId?.displayName,
@@ -126,6 +139,7 @@ export const getConversations = async (req, res) => {
         ...convo.toObject(),
         unreadCounts: convo.unreadCounts || {},
         participants,
+        isCleared,
       };
     });
 
@@ -140,11 +154,32 @@ export const getMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { limit = 50, cursor } = req.query;
+    const userId = req.user._id;
+
+    // Tìm cuộc trò chuyện để lấy thông tin clearedAt của user
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      "participants.userId": userId,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Cuộc trò chuyện không tồn tại hoặc bạn không phải thành viên" });
+    }
+
+    const participant = conversation.participants.find(
+      (p) => p.userId.toString() === userId.toString()
+    );
+    const clearedAt = participant?.clearedAt;
 
     const query = { conversationId };
 
     if (cursor) {
-      query.createdAt = { $lt: new Date(cursor) };
+      query.createdAt = {
+        $lt: new Date(cursor),
+        ...(clearedAt ? { $gt: clearedAt } : {})
+      };
+    } else if (clearedAt) {
+      query.createdAt = { $gt: clearedAt };
     }
 
     let messages = await Message.find(query)
@@ -236,6 +271,37 @@ export const markAsSeen = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi khi mark as seen", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const clearConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+
+    // Cập nhật trường clearedAt cho participant tương ứng và reset unread counts
+    const conversation = await Conversation.findOneAndUpdate(
+      {
+        _id: conversationId,
+        "participants.userId": userId,
+      },
+      {
+        $set: {
+          "participants.$.clearedAt": new Date(),
+          [`unreadCounts.${userId}`]: 0,
+        },
+      },
+      { new: true }
+    );
+
+    if (!conversation) {
+      return res.status(404).json({ message: "Cuộc trò chuyện không tồn tại hoặc bạn không phải thành viên" });
+    }
+
+    return res.status(200).json({ message: "Đã xóa lịch sử cuộc trò chuyện thành công" });
+  } catch (error) {
+    console.error("Lỗi khi xóa cuộc trò chuyện:", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
