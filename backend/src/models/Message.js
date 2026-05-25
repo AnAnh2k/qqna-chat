@@ -20,6 +20,10 @@ const messageSchema = new mongoose.Schema(
     imgUrl: {
       type: String,
     },
+    isRecalled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

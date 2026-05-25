@@ -3,6 +3,7 @@ import express from "express";
 import {
   sendDirectMessage,
   sendGroupMessage,
+  recallMessage,
 } from "../controllers/messageController.js";
 import {
   checkFriendship,
@@ -15,5 +16,8 @@ const router = express.Router();
 router.post("/direct", checkFriendship, sendDirectMessage);
 
 router.post("/group", checkGroupMembership, sendGroupMessage);
+
+// Thu hồi tin nhắn
+router.delete("/:messageId", recallMessage);
 
 export default router;
