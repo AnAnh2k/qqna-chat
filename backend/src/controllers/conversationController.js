@@ -1,6 +1,20 @@
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
+import Friend from "../models/Friend.js";
 import { io } from "../socket/index.js";
+
+const pair = (a, b) => (a < b ? [a, b] : [b, a]);
+
+const formatConversation = (conversation) => {
+  const participants = (conversation.participants || []).map((p) => ({
+    _id: p.userId?._id,
+    displayName: p.userId?.displayName,
+    avatarUrl: p.userId?.avatarUrl ?? null,
+    joinedAt: p.joinedAt,
+  }));
+
+  return { ...conversation.toObject(), participants };
+};
 
 export const createConversation = async (req, res) => {
   try {
@@ -356,6 +370,89 @@ export const leaveGroup = async (req, res) => {
     return res.status(200).json({ conversation: formatted });
   } catch (error) {
     console.error("Lỗi khi rời nhóm:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const addGroupMembers = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+    const { memberIds } = req.body;
+
+    if (!Array.isArray(memberIds) || memberIds.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng chọn ít nhất một thành viên" });
+    }
+
+    const uniqueMemberIds = [...new Set(memberIds.map((id) => id.toString()))];
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      type: "group",
+      "participants.userId": userId,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        message: "Nhóm không tồn tại hoặc bạn không phải thành viên",
+      });
+    }
+
+    const existingIds = new Set(
+      conversation.participants.map((p) => p.userId.toString()),
+    );
+
+    const newMemberIds = uniqueMemberIds.filter(
+      (id) => !existingIds.has(id) && id !== userId.toString(),
+    );
+
+    if (newMemberIds.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Các thành viên này đã có trong nhóm" });
+    }
+
+    const notFriends = [];
+    await Promise.all(
+      newMemberIds.map(async (memberId) => {
+        const [userA, userB] = pair(userId.toString(), memberId);
+        const friendship = await Friend.findOne({ userA, userB });
+        if (!friendship) {
+          notFriends.push(memberId);
+        }
+      }),
+    );
+
+    if (notFriends.length > 0) {
+      return res.status(403).json({
+        message: "Bạn chỉ có thể thêm bạn bè vào nhóm",
+        notFriends,
+      });
+    }
+
+    conversation.participants.push(
+      ...newMemberIds.map((memberId) => ({ userId: memberId })),
+    );
+    await conversation.save();
+
+    await conversation.populate([
+      { path: "participants.userId", select: "displayName avatarUrl" },
+      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
+      { path: "seenBy", select: "displayName avatarUrl" },
+    ]);
+
+    const formatted = formatConversation(conversation);
+
+    io.to(conversationId).emit("group-updated", formatted);
+    newMemberIds.forEach((memberId) => {
+      io.to(memberId).emit("new-group", formatted);
+    });
+
+    return res.status(200).json({ conversation: formatted });
+  } catch (error) {
+    console.error("Lỗi khi thêm thành viên vào nhóm:", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

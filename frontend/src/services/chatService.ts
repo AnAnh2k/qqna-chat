@@ -63,6 +63,12 @@ export const chatService = {
     const res = await api.patch(`/conversations/${conversationId}/leave`);
     return res.data.conversation;
   },
+  async addGroupMembers(conversationId: string, memberIds: string[]) {
+    const res = await api.patch(`/conversations/${conversationId}/members`, {
+      memberIds,
+    });
+    return res.data.conversation;
+  },
   async disbandGroup(conversationId: string) {
     const res = await api.delete(`/conversations/${conversationId}/disband`);
     return res.data;

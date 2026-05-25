@@ -313,6 +313,18 @@ export const useChatStore = create<ChatState>()(
           );
         }
       },
+      addGroupMembers: async (conversationId, memberIds) => {
+        try {
+          const conversation = await chatService.addGroupMembers(
+            conversationId,
+            memberIds,
+          );
+          get().updateConversation(conversation);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi thêm thành viên nhóm trong store", error);
+          throw error;
+        }
+      },
       leaveGroup: async (conversationId) => {
         try {
           await chatService.leaveGroup(conversationId);

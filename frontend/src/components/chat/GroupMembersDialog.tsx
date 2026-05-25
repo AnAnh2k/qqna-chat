@@ -4,13 +4,33 @@ import { Badge } from "../ui/badge";
 import { useUserStore } from "@/stores/useUserStore";
 import type { Conversation } from "@/types/chat";
 import { Card } from "../ui/card";
-import { Calendar, LogOut, Shield, Trash2, Users } from "lucide-react";
+import { Calendar, LogOut, Shield, Trash2, UserPlus, Users } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { Button } from "../ui/button";
 import ConfirmDialog from "../common/ConfirmDialog";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { useFriendStore } from "@/stores/useFriendStore";
+import type { Friend } from "@/types/user";
+import IniviteSuggestionList from "../newGroupChat/IniviteSuggestionList";
+import SelectedUsersList from "../newGroupChat/SelectedUsersList";
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error !== "object" || error === null || !("response" in error)) {
+    return fallback;
+  }
+
+  const response = error.response as {
+    data?: { message?: unknown };
+  };
+
+  return typeof response.data?.message === "string"
+    ? response.data.message
+    : fallback;
+};
 
 interface GroupMembersDialogProps {
   open: boolean;
@@ -21,11 +41,88 @@ interface GroupMembersDialogProps {
 const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogProps) => {
   const { viewProfile } = useUserStore();
   const currentUser = useAuthStore((state) => state.user);
-  const { leaveGroup, disbandGroup } = useChatStore();
+  const { leaveGroup, disbandGroup, addGroupMembers } = useChatStore();
+  const { friends, getFriends } = useFriendStore();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
+  const [addingMembers, setAddingMembers] = useState(false);
   const adminId = conversation.group?.createdBy;
   const isCurrentUserAdmin = currentUser?._id === adminId;
+
+  useEffect(() => {
+    if (open) {
+      getFriends();
+    }
+  }, [getFriends, open]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setAddMembersOpen(false);
+      setMemberSearch("");
+      setSelectedMembers([]);
+    }
+    setOpen(nextOpen);
+  };
+
+  const filteredFriends = useMemo(() => {
+    const existingMemberIds = new Set(
+      conversation.participants.map((member) => member._id),
+    );
+    const selectedMemberIds = new Set(
+      selectedMembers.map((member) => member._id),
+    );
+    const search = memberSearch.trim().toLowerCase();
+
+    return friends.filter((friend) => {
+      const matchesSearch =
+        !search || friend.displayName.toLowerCase().includes(search);
+
+      return (
+        matchesSearch &&
+        !existingMemberIds.has(friend._id) &&
+        !selectedMemberIds.has(friend._id)
+      );
+    });
+  }, [conversation.participants, friends, memberSearch, selectedMembers]);
+
+  const handleSelectFriend = (friend: Friend) => {
+    setSelectedMembers((current) => [...current, friend]);
+    setMemberSearch("");
+  };
+
+  const handleRemoveSelectedFriend = (friend: Friend) => {
+    setSelectedMembers((current) =>
+      current.filter((member) => member._id !== friend._id),
+    );
+  };
+
+  const handleAddMembers = async () => {
+    if (selectedMembers.length === 0) {
+      toast.warning("Vui lòng chọn ít nhất một thành viên.");
+      return;
+    }
+
+    try {
+      setAddingMembers(true);
+      await addGroupMembers(
+        conversation._id,
+        selectedMembers.map((member) => member._id),
+      );
+      setSelectedMembers([]);
+      setMemberSearch("");
+      setAddMembersOpen(false);
+      toast.success("Đã thêm thành viên vào nhóm.");
+    } catch (error: unknown) {
+      toast.error(
+        getErrorMessage(error, "Không thể thêm thành viên vào nhóm."),
+      );
+    } finally {
+      setAddingMembers(false);
+    }
+  };
 
   const handleGroupAction = async () => {
     try {
@@ -39,11 +136,13 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
       }
       setConfirmOpen(false);
       setOpen(false);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        (isCurrentUserAdmin ? "Không thể giải tán nhóm." : "Không thể rời nhóm.");
-      toast.error(message);
+    } catch (error: unknown) {
+      toast.error(
+        getErrorMessage(
+          error,
+          isCurrentUserAdmin ? "Không thể giải tán nhóm." : "Không thể rời nhóm.",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -51,7 +150,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-md overflow-hidden flex flex-col p-6 max-h-[80vh] bg-gradient-glass">
           <DialogHeader className="mb-4">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
@@ -105,7 +204,56 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             })}
           </div>
 
-          <div className="mt-4 border-t border-border/40 pt-4">
+          <div className="mt-4 space-y-4 border-t border-border/40 pt-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setAddMembersOpen((current) => !current)}
+            >
+              <UserPlus className="size-4" />
+              Thêm thành viên
+            </Button>
+
+            {addMembersOpen && (
+              <div className="space-y-3 rounded-xl border border-border/40 bg-background/40 p-3">
+                <div className="space-y-2">
+                  <Label htmlFor="add-group-member">Chọn bạn bè</Label>
+                  <Input
+                    id="add-group-member"
+                    placeholder="Tìm theo tên hiển thị..."
+                    value={memberSearch}
+                    onChange={(event) => setMemberSearch(event.target.value)}
+                    className="glass-light border-border/30"
+                  />
+                </div>
+
+                {filteredFriends.length > 0 ? (
+                  <IniviteSuggestionList
+                    filteredFriends={filteredFriends}
+                    onSelect={handleSelectFriend}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Không có bạn bè phù hợp để thêm vào nhóm.
+                  </p>
+                )}
+
+                <SelectedUsersList
+                  invitedUsers={selectedMembers}
+                  onRemove={handleRemoveSelectedFriend}
+                />
+
+                <Button
+                  className="w-full"
+                  onClick={handleAddMembers}
+                  disabled={addingMembers || selectedMembers.length === 0}
+                >
+                  <UserPlus className="size-4" />
+                  {addingMembers ? "Đang thêm..." : "Thêm vào nhóm"}
+                </Button>
+              </div>
+            )}
+
             <Button
               variant="destructive"
               className="w-full"

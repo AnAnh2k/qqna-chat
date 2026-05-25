@@ -72,6 +72,7 @@ export interface ChatState {
     memberIds: string[],
   ) => Promise<void>;
   clearConversation: (conversationId: string) => Promise<void>;
+  addGroupMembers: (conversationId: string, memberIds: string[]) => Promise<void>;
   leaveGroup: (conversationId: string) => Promise<void>;
   disbandGroup: (conversationId: string) => Promise<void>;
   uploadMessageImage: (file: File) => Promise<string>;
