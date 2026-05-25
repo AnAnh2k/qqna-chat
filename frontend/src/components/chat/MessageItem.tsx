@@ -4,6 +4,16 @@ import UserAvatar from "./UserAvatar";
 import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { useUserStore } from "@/stores/useUserStore";
+import { useChatStore } from "@/stores/useChatStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+import { MoreHorizontal, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface MessageItemProps {
   message: Message;
@@ -21,7 +31,19 @@ const MessageItem = ({
   lastMessageStatus,
 }: MessageItemProps) => {
   const { viewProfile } = useUserStore();
+  const recallMessage = useChatStore((s) => s.recallMessage);
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
+
+  const handleRecall = async () => {
+    const confirm = window.confirm("Bạn có chắc chắn muốn thu hồi tin nhắn này?");
+    if (!confirm) return;
+    try {
+      await recallMessage(message._id);
+      toast.success("Thu hồi tin nhắn thành công");
+    } catch (err) {
+      toast.error("Không thể thu hồi tin nhắn. Vui lòng thử lại!");
+    }
+  };
 
   const isShowTime =
     index === 0 ||
@@ -75,18 +97,73 @@ const MessageItem = ({
             message.isOwn ? "items-end" : "items-start",
           )}
         >
-          <Card
+          <div
             className={cn(
-              "p-3",
-              message.isOwn
-                ? "chat-bubble-sent border-0"
-                : "chat-bubble-received",
+              "flex items-center gap-2 group/msg relative",
+              message.isOwn ? "flex-row-reverse" : "flex-row",
             )}
           >
-            <p className="text-sm leading-relaxed break-words">
-              {message.content}
-            </p>
-          </Card>
+            <Card
+              className={cn(
+                "p-3 transition-all duration-300",
+                message.isRecalled
+                  ? "bg-muted/30 border border-dashed border-border/40 text-muted-foreground/80 italic select-none"
+                  : message.isOwn
+                    ? "chat-bubble-sent border-0"
+                    : "chat-bubble-received",
+              )}
+            >
+              <p className="text-sm leading-relaxed break-words">
+                {message.isRecalled ? "Tin nhắn đã được thu hồi" : message.content}
+              </p>
+            </Card>
+
+            {/* Time & Recall Action on Hover */}
+            {!message.isRecalled && (
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-200 text-[10px] text-muted-foreground shrink-0",
+                  message.isOwn ? "flex-row-reverse" : "flex-row",
+                )}
+              >
+                <span>
+                  {new Date(message.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                  })}
+                </span>
+
+                {message.isOwn && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 p-0 hover:bg-muted rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      }
+                    >
+                      <MoreHorizontal className="size-3.5" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align={message.isOwn ? "end" : "start"}
+                      className="w-28 min-w-[7rem]"
+                    >
+                      <DropdownMenuItem
+                        onClick={handleRecall}
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-xs gap-1.5"
+                      >
+                        <Undo2 className="size-3.5" />
+                        Thu hồi
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* seen/ delivered */}
           {message.isOwn && message._id === selectedConvo.lastMessage?._id && (

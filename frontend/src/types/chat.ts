@@ -51,6 +51,7 @@ export interface Message {
   senderId: string;
   content: string | null;
   imgUrl?: string | null;
+  isRecalled?: boolean;
   updatedAt?: string | null;
   createdAt: string;
   isOwn?: boolean;

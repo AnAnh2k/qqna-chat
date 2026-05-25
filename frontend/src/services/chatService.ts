@@ -67,4 +67,8 @@ export const chatService = {
     const res = await api.post("/conversations", { type, name, memberIds });
     return res.data.conversation;
   },
+  async recallMessage(messageId: string) {
+    const res = await api.delete(`/messages/${messageId}`);
+    return res.data;
+  },
 };

@@ -264,6 +264,54 @@ export const useChatStore = create<ChatState>()(
           );
         }
       },
+      recallMessage: async (messageId) => {
+        try {
+          await chatService.recallMessage(messageId);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi recallMessage trong store", error);
+          throw error;
+        }
+      },
+      handleMessageRecalled: (messageId, conversationId) => {
+        set((state) => {
+          const convoMessages = state.messages[conversationId];
+          if (!convoMessages) return {};
+
+          const updatedItems = convoMessages.items.map((m) =>
+            m._id === messageId
+              ? { ...m, content: "", isRecalled: true, imgUrl: null }
+              : m,
+          );
+
+          // Cập nhật tin nhắn cuối cùng trên sidebar nếu tin nhắn bị thu hồi là tin nhắn cuối cùng
+          const conversations = state.conversations.map((convo) => {
+            if (
+              convo._id === conversationId &&
+              convo.lastMessage?._id === messageId
+            ) {
+              return {
+                ...convo,
+                lastMessage: {
+                  ...convo.lastMessage,
+                  content: "Tin nhắn đã được thu hồi",
+                },
+              };
+            }
+            return convo;
+          });
+
+          return {
+            messages: {
+              ...state.messages,
+              [conversationId]: {
+                ...convoMessages,
+                items: updatedItems,
+              },
+            },
+            conversations,
+          };
+        });
+      },
     }),
     {
       name: "chat-storage",

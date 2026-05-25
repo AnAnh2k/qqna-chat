@@ -82,6 +82,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       socket.emit("join-conversation", conversation._id);
     });
 
+    // message recalled
+    socket.on("message-recalled", ({ messageId, conversationId }) => {
+      useChatStore.getState().handleMessageRecalled(messageId, conversationId);
+    });
+
     // new friend request
     socket.on("new-friend-request", (request) => {
       useFriendStore.setState((state) => ({
