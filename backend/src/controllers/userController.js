@@ -64,3 +64,21 @@ export const uploadAvatar = async (req, res) => {
     return res.status(500).json({ message: "Upload failed" });
   }
 };
+
+export const getUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select(
+      "_id displayName username avatarUrl bio"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error("Lỗi xảy ra khi lấy thông tin người dùng", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
