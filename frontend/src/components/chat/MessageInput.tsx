@@ -16,6 +16,9 @@ type MentionSuggestion =
 
 const mentionAllLabel = "mọi người" as const;
 
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
   const { sendDirectMessage, sendGroupMessage, uploadMessageImage } =
@@ -47,6 +50,10 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     selectedConvo.type === "group"
       ? selectedConvo.participants.filter((member) => member._id !== user._id)
       : [];
+  const mentionLabels = [
+    mentionAllLabel,
+    ...mentionableMembers.map((member) => member.displayName),
+  ].sort((a, b) => b.length - a.length);
 
   const mentionMatch = value.match(/(?:^|\s)@([^\s@]*)$/);
   const mentionQuery = mentionMatch?.[1]?.toLowerCase() ?? "";
@@ -91,6 +98,36 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
       current.replace(/(^|\s)@([^\s@]*)$/, `$1@${mention.displayName} `),
     );
     requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const renderComposerValue = (content: string) => {
+    if (!content || mentionLabels.length === 0) {
+      return content;
+    }
+
+    const mentionPattern = new RegExp(
+      `(@(?:${mentionLabels.map(escapeRegExp).join("|")}))`,
+      "gi",
+    );
+
+    return content.split(mentionPattern).map((part, index) => {
+      const isMention = mentionLabels.some(
+        (label) => part.toLowerCase() === `@${label.toLowerCase()}`,
+      );
+
+      if (!isMention) {
+        return <span key={`${part}-${index}`}>{part}</span>;
+      }
+
+      return (
+        <span
+          key={`${part}-${index}`}
+          className="rounded-sm bg-primary/10 text-primary ring-2 ring-primary/10"
+        >
+          {part}
+        </span>
+      );
+    });
   };
 
   // Kiểm tra quan hệ bạn bè đối với hội thoại tin nhắn riêng (1v1)
@@ -244,6 +281,11 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         </Button>
 
         <div className="flex-1 relative">
+          {selectedConvo.type === "group" && value && (
+            <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center overflow-hidden whitespace-pre px-2.5 pr-20 text-base leading-normal text-foreground md:text-sm">
+              {renderComposerValue(value)}
+            </div>
+          )}
           <Input
             ref={inputRef}
             onKeyPress={handleKeyPress}
@@ -251,7 +293,11 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Soạn tin nhắn..."
-            className="pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none"
+            className={`pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none ${
+              selectedConvo.type === "group" && value
+                ? "text-transparent caret-foreground"
+                : ""
+            }`}
           />
           {showMentionSuggestions && mentionSuggestions.length > 0 && (
             <div className="absolute bottom-11 left-0 z-20 w-72 overflow-hidden rounded-lg border border-border/70 bg-popover p-1 shadow-xl">

@@ -209,16 +209,16 @@ const MessageItem = ({
               ) : (
                 <Card
                   className={cn(
-                    "transition-all duration-300 overflow-hidden",
+                    "gap-0 overflow-hidden py-0 transition-all duration-300",
                     message.isRecalled
-                      ? "p-3 bg-muted/30 border border-dashed border-border/40 text-muted-foreground/80 italic select-none"
+                      ? "px-3 py-2 bg-muted/30 border border-dashed border-border/40 text-muted-foreground/80 italic select-none"
                       : message.isOwn
                         ? "chat-bubble-sent border-0"
                         : "chat-bubble-received",
                   )}
                 >
                   {message.isRecalled ? (
-                    <p className="text-sm leading-relaxed break-words px-3 py-2">
+                    <p className="text-sm leading-snug break-words">
                       Tin nhắn đã được thu hồi
                     </p>
                   ) : (
@@ -239,7 +239,7 @@ const MessageItem = ({
                         </button>
                       )}
                       {message.content && (
-                        <p className="text-sm leading-relaxed break-words px-3 py-2">
+                        <p className="text-sm leading-snug break-words px-2.5 py-1.5">
                           {renderMessageContent(message.content)}
                         </p>
                       )}
