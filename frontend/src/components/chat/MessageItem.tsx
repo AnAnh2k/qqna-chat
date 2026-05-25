@@ -25,6 +25,11 @@ interface MessageItemProps {
   lastMessageStatus: "delivered" | "seen";
 }
 
+const mentionAllLabel = "mọi người";
+
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const MessageItem = ({
   message,
   index,
@@ -45,7 +50,7 @@ const MessageItem = ({
       await recallMessage(message._id);
       setRecallConfirmOpen(false);
       toast.success("Thu hồi tin nhắn thành công");
-    } catch (err) {
+    } catch {
       toast.error("Không thể thu hồi tin nhắn. Vui lòng thử lại!");
     } finally {
       setRecalling(false);
@@ -63,6 +68,58 @@ const MessageItem = ({
   const participant = selectedConvo.participants.find(
     (p: Participant) => p._id.toString() === message.senderId.toString(),
   );
+
+  const mentionLabels = [
+    mentionAllLabel,
+    ...selectedConvo.participants.map((member) => member.displayName),
+  ]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  const renderMessageContent = (content: string) => {
+    if (mentionLabels.length === 0) {
+      return content;
+    }
+
+    const mentionPattern = new RegExp(
+      `(@(?:${mentionLabels.map(escapeRegExp).join("|")}))`,
+      "gi",
+    );
+
+    return content.split(mentionPattern).map((part, partIndex) => {
+      const isMention = mentionLabels.some(
+        (label) => part.toLowerCase() === `@${label.toLowerCase()}`,
+      );
+
+      if (!isMention) {
+        return <span key={`${part}-${partIndex}`}>{part}</span>;
+      }
+
+      return (
+        <span
+          key={`${part}-${partIndex}`}
+          className={cn(
+            "mx-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+            message.isOwn
+              ? "bg-white/20 text-white ring-1 ring-white/25"
+              : "bg-primary/10 text-primary ring-1 ring-primary/15",
+          )}
+        >
+          {part}
+        </span>
+      );
+    });
+  };
+
+  if (message.messageType === "system") {
+    return (
+      <div className="flex w-full justify-center px-4 py-2">
+        <span className="max-w-[80%] rounded-full bg-muted px-3 py-1 text-center text-xs font-medium text-muted-foreground">
+          {message.content}
+        </span>
+      </div>
+    );
+  }
 
   // Tin nhắn chỉ có ảnh (không có text) — không dùng Card bubble
   const isImageOnly = !!message.imgUrl && !message.content && !message.isRecalled;
@@ -183,7 +240,7 @@ const MessageItem = ({
                       )}
                       {message.content && (
                         <p className="text-sm leading-relaxed break-words px-3 py-2">
-                          {message.content}
+                          {renderMessageContent(message.content)}
                         </p>
                       )}
                     </>

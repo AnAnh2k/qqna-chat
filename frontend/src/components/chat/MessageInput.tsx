@@ -2,12 +2,19 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import type { Conversation, Participant } from "@/types/chat";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
-import { ImagePlus, Send, UserPlus, X, Loader2 } from "lucide-react";
+import { AtSign, ImagePlus, Send, UserPlus, Users, X, Loader2 } from "lucide-react";
 import { Input } from "../ui/input";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "@/stores/useChatStore";
 import { useFriendStore } from "@/stores/useFriendStore";
 import { toast } from "sonner";
+import UserAvatar from "./UserAvatar";
+
+type MentionSuggestion =
+  | { type: "all"; _id: "all"; displayName: "mọi người" }
+  | (Participant & { type: "member" });
+
+const mentionAllLabel = "mọi người" as const;
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
@@ -45,16 +52,32 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const mentionQuery = mentionMatch?.[1]?.toLowerCase() ?? "";
   const showMentionSuggestions =
     selectedConvo.type === "group" && mentionMatch !== null;
-  const mentionSuggestions = showMentionSuggestions
-    ? mentionableMembers
-        .filter((member) =>
-          member.displayName.toLowerCase().includes(mentionQuery),
-        )
-        .slice(0, 5)
+  const mentionSuggestions: MentionSuggestion[] = showMentionSuggestions
+    ? [
+        ...(mentionAllLabel.includes(mentionQuery)
+          ? [
+              {
+                type: "all" as const,
+                _id: "all" as const,
+                displayName: mentionAllLabel,
+              },
+            ]
+          : []),
+        ...mentionableMembers
+          .filter((member) =>
+            member.displayName.toLowerCase().includes(mentionQuery),
+          )
+          .slice(0, 5)
+          .map((member) => ({ ...member, type: "member" as const })),
+      ]
     : [];
 
   const getMentionedUserIds = (content: string) => {
     const lowerContent = content.toLowerCase();
+
+    if (lowerContent.includes(`@${mentionAllLabel}`)) {
+      return mentionableMembers.map((member) => member._id);
+    }
 
     return mentionableMembers
       .filter((member) =>
@@ -63,9 +86,9 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
       .map((member) => member._id);
   };
 
-  const insertMention = (member: Participant) => {
+  const insertMention = (mention: MentionSuggestion) => {
     setValue((current) =>
-      current.replace(/(^|\s)@([^\s@]*)$/, `$1@${member.displayName} `),
+      current.replace(/(^|\s)@([^\s@]*)$/, `$1@${mention.displayName} `),
     );
     requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -230,19 +253,41 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
             placeholder="Soạn tin nhắn..."
             className="pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none"
           />
-          {mentionSuggestions.length > 0 && (
-            <div className="absolute bottom-11 left-0 z-20 w-64 overflow-hidden rounded-md border border-border bg-popover shadow-md">
-              {mentionSuggestions.map((member) => (
+          {showMentionSuggestions && mentionSuggestions.length > 0 && (
+            <div className="absolute bottom-11 left-0 z-20 w-72 overflow-hidden rounded-lg border border-border/70 bg-popover p-1 shadow-xl">
+              {mentionSuggestions.map((mention) => (
                 <button
-                  key={member._id}
+                  key={mention._id}
                   type="button"
                   onMouseDown={(event) => {
                     event.preventDefault();
-                    insertMention(member);
+                    insertMention(mention);
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10 focus:bg-primary/10 focus:outline-none"
                 >
-                  <span className="font-medium">{member.displayName}</span>
+                  {mention.type === "all" ? (
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                      <Users className="size-4" />
+                    </span>
+                  ) : (
+                    <UserAvatar
+                      type="chat"
+                      name={mention.displayName}
+                      avatarUrl={mention.avatarUrl ?? undefined}
+                      className="size-8"
+                    />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-foreground">
+                      @{mention.displayName}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {mention.type === "all"
+                        ? "Nhắc tất cả thành viên trong nhóm"
+                        : "Nhắc thành viên này"}
+                    </span>
+                  </span>
+                  <AtSign className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               ))}
             </div>

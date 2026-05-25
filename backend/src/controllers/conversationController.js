@@ -2,6 +2,10 @@ import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import Friend from "../models/Friend.js";
 import { io } from "../socket/index.js";
+import {
+  emitNewMessage,
+  updateConversationAfterCreateMessage,
+} from "../utils/messageHelper.js";
 
 const pair = (a, b) => (a < b ? [a, b] : [b, a]);
 
@@ -443,9 +447,24 @@ export const addGroupMembers = async (req, res) => {
       { path: "seenBy", select: "displayName avatarUrl" },
     ]);
 
+    const addedNames = conversation.participants
+      .filter((p) => newMemberIds.includes(p.userId?._id.toString()))
+      .map((p) => p.userId?.displayName)
+      .filter(Boolean);
+    const systemMessage = await Message.create({
+      conversationId,
+      senderId: userId,
+      content: `${req.user.displayName} đã thêm ${addedNames.join(", ")} vào nhóm`,
+      messageType: "system",
+    });
+
+    updateConversationAfterCreateMessage(conversation, systemMessage, userId);
+    await conversation.save();
+
     const formatted = formatConversation(conversation);
 
     io.to(conversationId).emit("group-updated", formatted);
+    emitNewMessage(io, conversation, systemMessage);
     newMemberIds.forEach((memberId) => {
       io.to(memberId).emit("new-group", formatted);
     });

@@ -51,6 +51,7 @@ export interface Message {
   conversationId: string;
   senderId: string;
   content: string | null;
+  messageType?: "user" | "system";
   imgUrl?: string | null;
   mentions?: string[];
   isRecalled?: boolean;
