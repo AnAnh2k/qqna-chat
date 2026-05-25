@@ -1,6 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { formatOnlineTime, cn } from "@/lib/utils";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import { useChatStore } from "@/stores/useChatStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ChatCardProps {
   convoId: string;
@@ -23,11 +30,23 @@ const ChatCard = ({
   leftSection,
   subtitle,
 }: ChatCardProps) => {
+  const { clearConversation } = useChatStore();
+
+  const handleClear = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Ngăn sự kiện chọn thẻ chat
+    const confirmClear = window.confirm(
+      `Bạn có chắc chắn muốn xóa cuộc trò chuyện với "${name}"? Lịch sử tin nhắn sẽ bị xóa đối với bạn.`
+    );
+    if (confirmClear) {
+      await clearConversation(convoId);
+    }
+  };
+
   return (
     <Card
       key={convoId}
       className={cn(
-        "border-none p-3 cursor-pointer transition-smooth glass hover:bg-muted/30",
+        "border-none p-3 cursor-pointer transition-smooth glass hover:bg-muted/30 group",
         isActive &&
           "ring-2 ring-primary/50 bg-gradient-to-tr from-primary-glow/10 to-primary-foreground",
       )}
@@ -56,7 +75,29 @@ const ChatCard = ({
             <div className="flex items-center gap-1 flex-1 min-w-0">
               {subtitle}
             </div>
-            <MoreHorizontal className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 hover:size-5 transition-smooth" />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground transition-smooth flex items-center justify-center focus:outline-none"
+                  />
+                }
+              >
+                <MoreHorizontal className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  variant="destructive"
+                  className="cursor-pointer flex items-center gap-2"
+                  onClick={handleClear}
+                >
+                  <Trash2 className="size-4" />
+                  <span>Xóa trò chuyện</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

@@ -38,6 +38,7 @@ export interface Conversation {
   unreadCounts: Record<string, number>; // key = userId, value = unread count
   createdAt: string;
   updatedAt: string;
+  isCleared?: boolean;
 }
 
 export interface ConversationResponse {

@@ -55,6 +55,10 @@ export const chatService = {
     const res = await api.patch(`/conversations/${conversationId}/seen`);
     return res.data;
   },
+  async clearConversation(conversationId: string) {
+    const res = await api.delete(`/conversations/${conversationId}/clear`);
+    return res.data;
+  },
   async createConversation(
     type: "direct" | "group",
     name: string,

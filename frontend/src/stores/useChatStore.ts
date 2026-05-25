@@ -235,6 +235,35 @@ export const useChatStore = create<ChatState>()(
           set({ loading: false });
         }
       },
+      clearConversation: async (conversationId) => {
+        try {
+          await chatService.clearConversation(conversationId);
+          set((state) => {
+            const nextMessages = { ...state.messages };
+            delete nextMessages[conversationId];
+
+            const nextConvos = state.conversations.map((c) =>
+              c._id === conversationId ? { ...c, isCleared: true } : c
+            );
+
+            const activeId =
+              state.activeConversationId === conversationId
+                ? null
+                : state.activeConversationId;
+
+            return {
+              messages: nextMessages,
+              conversations: nextConvos,
+              activeConversationId: activeId,
+            };
+          });
+        } catch (error) {
+          console.error(
+            "Lỗi xảy ra khi gọi clearConversation trong store",
+            error,
+          );
+        }
+      },
     }),
     {
       name: "chat-storage",
