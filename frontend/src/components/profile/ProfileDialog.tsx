@@ -138,21 +138,27 @@ const ProfileDialog = ({ open, setOpen }: ProfileDialogProps = {}) => {
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-sm">
-                    <span className="text-muted-foreground">Tên đăng nhập:</span>
-                    <span className="col-span-2 font-medium">@{displayUser.username}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
                     <span className="text-muted-foreground">Họ và tên:</span>
                     <span className="col-span-2 font-medium">{displayUser.displayName}</span>
                   </div>
-                  {displayUser.bio && (
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <span className="text-muted-foreground">Giới thiệu:</span>
-                      <span className="col-span-2 text-slate-600 dark:text-slate-350 italic">
-                        "{displayUser.bio}"
-                      </span>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="text-muted-foreground">Giới thiệu:</span>
+                    <span className="col-span-2 text-slate-600 dark:text-slate-350">
+                      {displayUser.bio || "Chưa cập nhật"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="text-muted-foreground">Email:</span>
+                    <span className="col-span-2 font-medium break-all">
+                      {displayUser.email || "Chưa cập nhật"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="text-muted-foreground">SĐT:</span>
+                    <span className="col-span-2 font-medium">
+                      {displayUser.phone || "Chưa cập nhật"}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>

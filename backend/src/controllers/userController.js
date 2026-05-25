@@ -69,7 +69,7 @@ export const getUserById = async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).select(
-      "_id displayName username avatarUrl bio"
+      "_id displayName username avatarUrl bio email phone"
     );
 
     if (!user) {
