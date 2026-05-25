@@ -9,6 +9,11 @@ export type UpdateProfilePayload = Pick<
   bio?: string;
 };
 
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 export const userService = {
   uploadAvatar: async (formData: FormData) => {
     const res = await api.post("/users/uploadAvatar", formData, {
@@ -28,5 +33,9 @@ export const userService = {
   updateMe: async (payload: UpdateProfilePayload) => {
     const res = await api.patch("/users/me", payload);
     return res.data.user;
+  },
+  changePassword: async (payload: ChangePasswordPayload) => {
+    const res = await api.patch("/users/me/password", payload);
+    return res.data;
   },
 };
