@@ -20,9 +20,17 @@ const PORT = process.env.PORT || 5001;
 //middleware
 app.use(express.json());
 app.use(cookieParser());
+const allowedOrigins = [process.env.CLIENT_URL];
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, // Thay đổi nếu frontend chạy trên cổng khác
+    origin: (origin, callback) => {
+      // Cho phép requests không có origin (như postman, curl) hoặc bất kỳ cổng localhost nào
+      if (!origin || origin.startsWith("http://localhost:") || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Blocked by CORS"));
+      }
+    },
     credentials: true, // Cho phép gửi cookie
   }),
 );

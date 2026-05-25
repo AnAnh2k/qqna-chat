@@ -4,6 +4,8 @@ import ChatAppPage from "./pages/ChatAppPage";
 import SignUpPage from "./pages/SignUpPage";
 import { Toaster } from "sonner";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import GuestRoute from "./components/auth/GuestRoute";
+import ErrorPage from "./pages/ErrorPage";
 import { useThemeStore } from "./stores/useThemeStore";
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/useAuthStore";
@@ -31,13 +33,17 @@ function App() {
       <Toaster richColors position="top-right" closeButton={true} />
       <BrowserRouter>
         <Routes>
-          {/* public routes */}
-          <Route path="/signin" element={<SignInPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
+          {/* guest routes */}
+          <Route element={<GuestRoute />}>
+            <Route path="/signin" element={<SignInPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+          </Route>
           {/* protected routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<ChatAppPage />} />
           </Route>
+          {/* error fallback routes */}
+          <Route path="*" element={<ErrorPage />} />
         </Routes>
       </BrowserRouter>
     </ServerWarmup>
@@ -45,3 +51,4 @@ function App() {
 }
 
 export default App;
+
