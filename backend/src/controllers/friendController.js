@@ -190,3 +190,28 @@ export const getFriendsRequests = async (req, res) => {
     res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
+
+export const unfriend = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { friendId } = req.params;
+
+    let userA = userId.toString();
+    let userB = friendId.toString();
+
+    if (userA > userB) {
+      [userA, userB] = [userB, userA];
+    }
+
+    const result = await Friend.findOneAndDelete({ userA, userB });
+
+    if (!result) {
+      return res.status(404).json({ message: "Hai người chưa kết bạn" });
+    }
+
+    return res.status(200).json({ message: "Hủy kết bạn thành công" });
+  } catch (error) {
+    console.error("Lỗi xảy ra khi hủy kết bạn", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};

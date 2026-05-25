@@ -6,6 +6,7 @@ import {
   getAllFriends,
   sendFriendRequest,
   getFriendsRequests,
+  unfriend,
 } from "../controllers/friendController.js";
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.get("/", getAllFriends);
 
 //lấy danh sách lời mời kết bạn
 router.get("/requests", getFriendsRequests);
+
+//hủy kết bạn
+router.delete("/:friendId", unfriend);
 
 export default router;
