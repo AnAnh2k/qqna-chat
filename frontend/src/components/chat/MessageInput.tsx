@@ -1,19 +1,42 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { Conversation } from "@/types/chat";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { ImagePlus, Send } from "lucide-react";
+import { ImagePlus, Send, UserPlus } from "lucide-react";
 import { Input } from "../ui/input";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "@/stores/useChatStore";
+import { useFriendStore } from "@/stores/useFriendStore";
 import { toast } from "sonner";
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
   const { sendDirectMessage, sendGroupMessage } = useChatStore();
+  const { friends, getFriends } = useFriendStore();
   const [value, setValue] = useState("");
 
-  if (!user) return;
+  useEffect(() => {
+    getFriends();
+  }, [getFriends]);
+
+  if (!user) return null;
+
+  // Kiểm tra quan hệ bạn bè đối với hội thoại tin nhắn riêng (1v1)
+  if (selectedConvo.type === "direct") {
+    const otherUser = selectedConvo.participants.find((p) => p._id !== user._id);
+    const isFriend = friends.some((f) => f._id === otherUser?._id);
+
+    if (!isFriend) {
+      return (
+        <div className="flex flex-col items-center justify-center p-4 bg-muted/30 border-t border-border/40 text-center gap-2">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-1.5 justify-center">
+            <UserPlus className="size-4 text-amber-500" />
+            <span>Hai bạn hiện không phải là bạn bè. Hãy gửi lại lời mời kết bạn để tiếp tục trò chuyện.</span>
+          </p>
+        </div>
+      );
+    }
+  }
 
   const sendMessage = async () => {
     if (!value.trim()) return;
