@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,22 @@ import {
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
-import { FileText, Send, X } from "lucide-react";
+import { FileText, Loader2, Send, X } from "lucide-react";
 import { toast } from "sonner";
+import RichPostEditor, {
+  type RichPostEditorHandle,
+} from "./RichPostEditor";
+import {
+  extractImageUrlsFromHtml,
+  extractPlainTextFromHtml,
+  formatRichPostHtml,
+} from "@/lib/richText";
 
 interface CreatePostDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  onSend: (title: string, content: string) => Promise<void>;
+  onSend: (title: string, content: string, imgUrls: string[]) => Promise<void>;
+  onUploadImage?: (file: File) => Promise<string>;
   initialTitle?: string;
   initialContent?: string;
   mode?: "create" | "edit";
@@ -26,6 +34,7 @@ const CreatePostDialog = ({
   open,
   setOpen,
   onSend,
+  onUploadImage,
   initialTitle = "",
   initialContent = "",
   mode = "create",
@@ -33,7 +42,15 @@ const CreatePostDialog = ({
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [submitting, setSubmitting] = useState(false);
+  const editorRef = useRef<RichPostEditorHandle>(null);
   const isEditMode = mode === "edit";
+
+  useEffect(() => {
+    if (open) {
+      setTitle(initialTitle);
+      setContent(initialContent);
+    }
+  }, [open, initialTitle, initialContent]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -46,25 +63,33 @@ const CreatePostDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedTitle = title.trim();
-    const trimmedContent = content.trim();
 
     if (!trimmedTitle) {
       toast.warning("Vui lòng nhập tiêu đề bài viết.");
       return;
     }
 
-    if (!trimmedContent) {
-      toast.warning("Vui lòng nhập nội dung bài viết.");
-      return;
-    }
-
     try {
       setSubmitting(true);
-      await onSend(trimmedTitle, trimmedContent);
+
+      const resolvedHtml =
+        (await editorRef.current?.resolveHtml()) || content || "";
+      const finalHtml = formatRichPostHtml(resolvedHtml);
+      const plainText = extractPlainTextFromHtml(finalHtml).trim();
+      const imgUrls = extractImageUrlsFromHtml(finalHtml);
+
+      if (!plainText && imgUrls.length === 0) {
+        toast.warning("Vui lòng nhập nội dung bài viết.");
+        return;
+      }
+
+      await onSend(trimmedTitle, finalHtml, imgUrls);
       handleOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error(isEditMode ? "Không thể cập nhật bài viết." : "Không thể đăng bài viết.");
+      toast.error(
+        isEditMode ? "Không thể cập nhật bài viết." : "Không thể đăng bài viết.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -72,16 +97,15 @@ const CreatePostDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[50vw] bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
+      <DialogContent className="sm:max-w-[72vw] bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[90vh]">
         <DialogHeader className="mb-4">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <FileText className="size-5 text-primary" />
-            <span>{isEditMode ? "Sửa Bài Viết" : "Soạn Thảo Bài Viết / Câu Chuyện"}</span>
+            <span>{isEditMode ? "Sửa Bài Viết" : "Soạn Bài Viết"}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-4 overflow-hidden">
-          {/* Tiêu đề */}
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           <div className="space-y-1.5 shrink-0">
             <Label htmlFor="post-title" className="text-sm font-semibold text-foreground">
               Tiêu đề bài viết <span className="text-destructive">*</span>
@@ -90,7 +114,7 @@ const CreatePostDialog = ({
               id="post-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Nhập tiêu đề câu chuyện ngắn gọn..."
+              placeholder="Nhập tiêu đề câu chuyện..."
               maxLength={100}
               className="glass-light border-border/30 h-10 text-sm font-medium"
               required
@@ -99,26 +123,21 @@ const CreatePostDialog = ({
             />
           </div>
 
-          {/* Nội dung */}
-          <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
-            <Label htmlFor="post-content" className="text-sm font-semibold text-foreground shrink-0">
+          <div className="space-y-1.5 min-h-0 flex-1 flex flex-col overflow-hidden">
+            <Label className="text-sm font-semibold text-foreground shrink-0">
               Nội dung chi tiết <span className="text-destructive">*</span>
             </Label>
-            <Textarea
-              id="post-content"
+            <RichPostEditor
+              ref={editorRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Viết câu chuyện hoặc nội dung bài viết của bạn ở đây... (Bạn có thể nhấn Enter để xuống dòng thoải mái)"
-              className="flex-1 glass-light border-border/30 resize-none p-3 text-sm beautiful-scrollbar min-h-[150px]"
-              required
+              onChange={setContent}
+              onUploadImage={onUploadImage}
               disabled={submitting}
+              placeholder="Viết câu chuyện của bạn. Dán ảnh trực tiếp vào đây."
             />
-            <p className="text-[10px] text-muted-foreground text-right shrink-0">
-              Ký tự: {content.length}
-            </p>
           </div>
 
-          <DialogFooter className="mt-4 shrink-0 flex gap-2 sm:justify-end">
+          <DialogFooter className="mt-2 shrink-0 flex gap-2 sm:justify-end">
             <Button
               type="button"
               variant="ghost"
@@ -131,11 +150,14 @@ const CreatePostDialog = ({
             </Button>
             <Button
               type="submit"
-              disabled={submitting || !title.trim() || !content.trim()}
+              disabled={submitting || !title.trim()}
               className="bg-gradient-chat hover:shadow-glow hover:scale-[1.02] transition-smooth px-5"
             >
               {submitting ? (
-                "Đang gửi..."
+                <>
+                  <Loader2 className="size-4 mr-1.5 animate-spin" />
+                  Đang lưu...
+                </>
               ) : (
                 <>
                   <Send className="size-4 mr-1.5 text-white" />

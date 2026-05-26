@@ -21,9 +21,10 @@ import { Button } from "../ui/button";
 import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ConfirmDialog from "../common/ConfirmDialog";
 import CreatePostDialog from "./CreatePostDialog";
+import { extractImageUrlsFromHtml, formatRichPostHtml } from "@/lib/richText";
 
 interface MessageItemProps {
   message: Message;
@@ -168,7 +169,13 @@ const MessageItem = ({
   lastMessageStatus,
 }: MessageItemProps) => {
   const { viewProfile } = useUserStore();
-  const { recallMessage, reactToMessage, setReplyingTo, updatePostMessage } = useChatStore();
+  const {
+    recallMessage,
+    reactToMessage,
+    setReplyingTo,
+    updatePostMessage,
+    uploadMessageImage,
+  } = useChatStore();
   const { user } = useAuthStore();
   const isLastMessage = message._id === selectedConvo.lastMessage?._id;
   const canShowSeenReceipts = isLastMessage && message.senderId === user?._id;
@@ -205,9 +212,13 @@ const MessageItem = ({
     }
   };
 
-  const handleUpdatePost = async (title: string, content: string) => {
+  const handleUpdatePost = async (
+    title: string,
+    content: string,
+    imageUrls: string[] = [],
+  ) => {
     try {
-      await updatePostMessage(message._id, title, content);
+      await updatePostMessage(message._id, title, content, imageUrls);
       setPostReaderOpen(false);
       toast.success("Đã cập nhật bài viết");
     } catch (error) {
@@ -230,6 +241,28 @@ const MessageItem = ({
       : message.imgUrl
         ? [message.imgUrl]
         : [];
+  const postImageUrls = useMemo(
+    () =>
+      message.messageType === "post"
+        ? message.imgUrls?.length
+          ? message.imgUrls
+          : extractImageUrlsFromHtml(message.content ?? "")
+        : [],
+    [message.content, message.imgUrls, message.messageType],
+  );
+  const lightboxImages =
+    message.messageType === "post" ? postImageUrls : allImages;
+
+  const openLightboxBySrc = (src: string) => {
+    const idx = lightboxImages.findIndex(
+      (url) => url === src || src.includes(url) || url.includes(src),
+    );
+
+    if (idx >= 0) {
+      setActiveImageIndex(idx);
+      setLightboxOpen(true);
+    }
+  };
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -237,16 +270,19 @@ const MessageItem = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setLightboxOpen(false);
-      } else if (e.key === "ArrowLeft" && allImages.length > 1) {
-        setActiveImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-      } else if (e.key === "ArrowRight" && allImages.length > 1) {
-        setActiveImageIndex((prev) => (prev + 1) % allImages.length);
+      } else if (e.key === "ArrowLeft" && lightboxImages.length > 1) {
+        setActiveImageIndex(
+          (prev) =>
+            (prev - 1 + lightboxImages.length) % lightboxImages.length,
+        );
+      } else if (e.key === "ArrowRight" && lightboxImages.length > 1) {
+        setActiveImageIndex((prev) => (prev + 1) % lightboxImages.length);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxOpen, allImages.length]);
+  }, [lightboxOpen, lightboxImages.length]);
 
   const renderImageGrid = (roundedTopOnly: boolean) => {
     if (allImages.length === 0) return null;
@@ -511,33 +547,36 @@ const MessageItem = ({
   return (
     <>
       {/* Lightbox fullscreen */}
-      {lightboxOpen && allImages.length > 0 && (
+      {lightboxOpen && lightboxImages.length > 0 && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm select-none"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-sm select-none"
           onClick={() => setLightboxOpen(false)}
         >
           {/* Close button */}
           <button
-            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/25 rounded-full p-2.5 transition-all z-50 cursor-pointer shadow-md"
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/25 rounded-full p-2.5 transition-all z-[80] cursor-pointer shadow-md"
             onClick={() => setLightboxOpen(false)}
           >
             <X className="size-5" />
           </button>
 
           {/* Indicator text (e.g. "2 / 5") */}
-          {allImages.length > 1 && (
-            <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-black/55 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full z-50 pointer-events-none tracking-wide">
-              {activeImageIndex + 1} / {allImages.length}
+          {lightboxImages.length > 1 && (
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-black/55 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full z-[80] pointer-events-none tracking-wide">
+              {activeImageIndex + 1} / {lightboxImages.length}
             </div>
           )}
 
           {/* Left Navigation Arrow */}
-          {allImages.length > 1 && (
+          {lightboxImages.length > 1 && (
             <button
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all z-50 cursor-pointer hover:scale-105"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all z-[80] cursor-pointer hover:scale-105"
               onClick={(e) => {
                 e.stopPropagation();
-                setActiveImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+                setActiveImageIndex(
+                  (prev) =>
+                    (prev - 1 + lightboxImages.length) % lightboxImages.length,
+                );
               }}
             >
               <ChevronLeft className="size-6" />
@@ -546,19 +585,19 @@ const MessageItem = ({
 
           {/* Image */}
           <img
-            src={allImages[activeImageIndex]}
+            src={lightboxImages[activeImageIndex]}
             alt={`Ảnh phóng to ${activeImageIndex + 1}`}
             className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           />
 
           {/* Right Navigation Arrow */}
-          {allImages.length > 1 && (
+          {lightboxImages.length > 1 && (
             <button
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all z-50 cursor-pointer hover:scale-105"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all z-[80] cursor-pointer hover:scale-105"
               onClick={(e) => {
                 e.stopPropagation();
-                setActiveImageIndex((prev) => (prev + 1) % allImages.length);
+                setActiveImageIndex((prev) => (prev + 1) % lightboxImages.length);
               }}
             >
               <ChevronRight className="size-6" />
@@ -656,10 +695,19 @@ const MessageItem = ({
                 <Card
                   onClick={() => setPostReaderOpen(true)}
                   className={cn(
-                    "cursor-pointer hover:shadow-soft transition-all duration-300 border border-primary/20 bg-gradient-glass p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[280px] rounded-2xl shadow-sm",
+                    "cursor-pointer hover:shadow-soft transition-all duration-300 border border-primary/20 bg-gradient-glass p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[280px] rounded-2xl shadow-sm overflow-hidden",
                     message.isOwn ? "chat-bubble-sent border-0" : "chat-bubble-received border-border/40"
                   )}
                 >
+                  {postImageUrls.length > 0 && (
+                    <div className="-mx-3.5 -mt-3.5 mb-1 h-32 overflow-hidden">
+                      <img
+                        src={postImageUrls[0]}
+                        alt="Ảnh bài viết"
+                        className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5 border-b border-primary/10 pb-1.5 select-none">
                     <FileText className="size-3.5 text-primary shrink-0" />
                     <span className="font-bold text-[10px] uppercase tracking-wider text-primary">
@@ -669,9 +717,12 @@ const MessageItem = ({
                   <h3 className="font-bold text-sm text-foreground line-clamp-2 break-all leading-snug">
                     {message.title}
                   </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-3 break-all leading-relaxed whitespace-pre-line">
-                    {message.content}
-                  </p>
+                  <div
+                    className="text-xs text-muted-foreground line-clamp-3 overflow-hidden break-words leading-relaxed [&_h1]:text-sm [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-sm [&_h3]:font-semibold [&_h4]:text-sm [&_h4]:font-semibold [&_a]:text-primary [&_a]:underline [&_img]:max-h-16 [&_img]:rounded-lg [&_img]:my-1"
+                    dangerouslySetInnerHTML={{
+                      __html: formatRichPostHtml(message.content ?? ""),
+                    }}
+                  />
                   <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/30 select-none">
                     <span className="text-[10px] text-muted-foreground/80 font-medium">
                       Tác giả: {message.isOwn ? "Bạn" : (participant?.displayName || "QQNA")}
@@ -943,9 +994,18 @@ const MessageItem = ({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-2 pr-1 beautiful-scrollbar min-h-0">
-            <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap break-words font-normal">
-              {message.content}
-            </div>
+            <div
+              className="post-content text-slate-700 dark:text-slate-300 text-sm leading-relaxed break-words [&_h1]:mb-4 [&_h1]:text-3xl [&_h1]:font-black [&_h1]:tracking-tight [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-2.5 [&_h3]:text-xl [&_h3]:font-bold [&_h4]:mb-2 [&_h4]:text-lg [&_h4]:font-semibold [&_p]:mb-3 [&_a]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-2xl [&_img]:shadow-md [&_img]:cursor-zoom-in"
+              onClick={(event) => {
+                const target = event.target as HTMLElement | null;
+                if (target?.tagName === "IMG") {
+                  openLightboxBySrc((target as HTMLImageElement).currentSrc || target.getAttribute("src") || "");
+                }
+              }}
+              dangerouslySetInnerHTML={{
+                __html: formatRichPostHtml(message.content ?? ""),
+              }}
+            />
           </div>
 
           <DialogFooter className="mt-4 shrink-0 border-t border-border/40 pt-4 flex sm:justify-end">
@@ -976,6 +1036,7 @@ const MessageItem = ({
           open={postEditOpen}
           setOpen={setPostEditOpen}
           onSend={handleUpdatePost}
+          onUploadImage={uploadMessageImage}
           initialTitle={message.title ?? ""}
           initialContent={message.content ?? ""}
           mode="edit"

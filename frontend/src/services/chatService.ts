@@ -127,10 +127,16 @@ export const chatService = {
     const res = await api.delete(`/messages/${messageId}`);
     return res.data;
   },
-  async updatePostMessage(messageId: string, title: string, content: string) {
+  async updatePostMessage(
+    messageId: string,
+    title: string,
+    content: string,
+    imgUrls: string[] = [],
+  ) {
     const res = await api.patch(`/messages/${messageId}/post`, {
       title,
       content,
+      imgUrls,
     });
     return res.data.message;
   },

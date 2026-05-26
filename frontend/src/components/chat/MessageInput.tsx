@@ -260,21 +260,36 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     }
   };
 
-  const handleSendPost = async (title: string, content: string) => {
+  const handleSendPost = async (
+    title: string,
+    content: string,
+    imageUrls: string[] = [],
+  ) => {
     try {
+      const singleImgUrl = imageUrls.length === 1 ? imageUrls[0] : undefined;
+      const albumImgUrls = imageUrls.length > 1 ? imageUrls : undefined;
+
       if (selectedConvo.type === "direct") {
         const otherUser = selectedConvo.participants.filter(
           (p) => p._id !== user._id,
         )[0];
-        await sendDirectMessage(otherUser._id, content, undefined, title, "post");
+        await sendDirectMessage(
+          otherUser._id,
+          content,
+          singleImgUrl,
+          title,
+          "post",
+          albumImgUrls,
+        );
       } else {
         await sendGroupMessage(
           selectedConvo._id,
           content,
-          undefined,
+          singleImgUrl,
           [],
           title,
           "post",
+          albumImgUrls,
         );
       }
     } catch (error) {
@@ -462,6 +477,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         open={postDialogOpen}
         setOpen={setPostDialogOpen}
         onSend={handleSendPost}
+        onUploadImage={uploadMessageImage}
       />
       <AvatarPreviewDialog
         open={!!previewImageUrl}

@@ -468,9 +468,24 @@ export const useChatStore = create<ChatState>()(
           };
         });
       },
-      updatePostMessage: async (messageId, title, content) => {
+      updatePostMessage: async (messageId, title, content, imgUrls = []) => {
         try {
-          await chatService.updatePostMessage(messageId, title, content);
+          const updatedMessage = await chatService.updatePostMessage(
+            messageId,
+            title,
+            content,
+            imgUrls,
+          );
+
+          const { activeConversationId } = get();
+          if (updatedMessage?.conversationId) {
+            get().handleMessageUpdated(
+              updatedMessage,
+              updatedMessage.conversationId,
+            );
+          } else if (activeConversationId) {
+            get().handleMessageUpdated(updatedMessage, activeConversationId);
+          }
         } catch (error) {
           console.error("Lỗi xảy ra khi updatePostMessage trong store", error);
           throw error;
@@ -496,6 +511,8 @@ export const useChatStore = create<ChatState>()(
                 lastMessage: {
                   ...convo.lastMessage,
                   content: message.content ?? "",
+                  imgUrl: message.imgUrl ?? null,
+                  imgUrls: message.imgUrls ?? null,
                 },
               };
             }
@@ -516,7 +533,12 @@ export const useChatStore = create<ChatState>()(
                 ...convoMessages,
                 items: convoMessages.items.map((item) =>
                   item._id === message._id
-                    ? { ...item, ...normalizedMessage }
+                    ? {
+                        ...item,
+                        ...normalizedMessage,
+                        imgUrl: normalizedMessage.imgUrl ?? null,
+                        imgUrls: normalizedMessage.imgUrls ?? [],
+                      }
                     : item,
                 ),
               },

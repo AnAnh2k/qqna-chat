@@ -162,11 +162,14 @@ export const recallMessage = async (req, res) => {
 export const updatePostMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
-    const { title, content } = req.body;
+    const { title, content, imgUrls } = req.body;
     const userId = req.user._id;
 
     const trimmedTitle = typeof title === "string" ? title.trim() : "";
     const trimmedContent = typeof content === "string" ? content.trim() : "";
+    const sanitizedImgUrls = Array.isArray(imgUrls)
+      ? imgUrls.filter((url) => typeof url === "string" && url.trim())
+      : [];
 
     if (!trimmedTitle) {
       return res.status(400).json({ message: "Tiêu đề bài viết không được để trống" });
@@ -191,11 +194,14 @@ export const updatePostMessage = async (req, res) => {
 
     message.title = trimmedTitle;
     message.content = trimmedContent;
+    message.imgUrl = sanitizedImgUrls.length === 1 ? sanitizedImgUrls[0] : undefined;
+    message.imgUrls = sanitizedImgUrls.length > 1 ? sanitizedImgUrls : [];
     await message.save();
 
     const conversation = await Conversation.findById(message.conversationId);
     if (conversation?.lastMessage?._id?.toString() === message._id.toString()) {
       conversation.lastMessage.content = trimmedContent;
+      conversation.lastMessage.imgUrl = message.imgUrl || null;
       conversation.lastMessageAt = message.createdAt;
       await conversation.save();
     }
