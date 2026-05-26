@@ -1,11 +1,12 @@
 import { chatService } from "@/services/chatService";
+import type { Conversation } from "@/types/chat";
 import type { ChatState } from "@/types/store";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useAuthStore } from "./useAuthStore";
 import { useSocketStore } from "./useSocketStore";
 
-const getConversationTime = (conversation: any) => {
+const getConversationTime = (conversation: Conversation) => {
   const timestamp =
     conversation.lastMessageAt ??
     conversation.lastMessage?.createdAt ??
@@ -15,7 +16,7 @@ const getConversationTime = (conversation: any) => {
   return timestamp ? new Date(timestamp).getTime() : 0;
 };
 
-const sortConversationsByLatest = (conversations: any[]) =>
+const sortConversationsByLatest = (conversations: Conversation[]) =>
   [...conversations].sort(
     (a, b) => getConversationTime(b) - getConversationTime(a),
   );
@@ -118,12 +119,7 @@ export const useChatStore = create<ChatState>()(
             imgUrls,
             replyTo,
           );
-          set((state) => ({
-            conversations: state.conversations.map((c) =>
-              c._id === activeConversationId ? { ...c, seenBy: [] } : c,
-            ),
-            replyingTo: null,
-          }));
+          set({ replyingTo: null });
         } catch (error) {
           console.error("Lỗi xảy ra khi gửi direct message", error);
         }
@@ -149,12 +145,7 @@ export const useChatStore = create<ChatState>()(
             imgUrls,
             replyTo,
           );
-          set((state) => ({
-            conversations: state.conversations.map((c) =>
-              c._id === get().activeConversationId ? { ...c, seenBy: [] } : c,
-            ),
-            replyingTo: null,
-          }));
+          set({ replyingTo: null });
         } catch (error) {
           console.error("Lỗi xảy ra gửi group message", error);
         }
@@ -256,12 +247,16 @@ export const useChatStore = create<ChatState>()(
           }
 
           const isLastMsgOwn =
-            lastMsg.sender?._id === user._id ||
-            (lastMsg.sender as any) === user._id;
+            (typeof lastMsg.sender === "string"
+              ? lastMsg.sender
+              : lastMsg.sender?._id) === user._id;
           const mySeen = (convo.seenBy ?? []).find(
-            (s) =>
-              s.userId?._id === user._id ||
-              (s.userId as any) === user._id,
+            (s) => {
+              const seenUserId =
+                typeof s.userId === "string" ? s.userId : s.userId?._id;
+
+              return seenUserId === user._id;
+            },
           );
           const alreadySeen = mySeen && mySeen.messageId === lastMsg._id;
 

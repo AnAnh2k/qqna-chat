@@ -12,6 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { Button } from "../ui/button";
 import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
@@ -32,6 +37,122 @@ const mentionAllLabel = "mọi người";
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const getStartOfDay = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const getDayDiff = (date: Date, compareDate: Date) =>
+  Math.round(
+    (getStartOfDay(compareDate).getTime() - getStartOfDay(date).getTime()) /
+      (1000 * 60 * 60 * 24),
+  );
+
+const formatWeekday = (date: Date) => {
+  const weekdays = [
+    "Chủ Nhật",
+    "Thứ Hai",
+    "Thứ Ba",
+    "Thứ Tư",
+    "Thứ Năm",
+    "Thứ Sáu",
+    "Thứ Bảy",
+  ];
+
+  return weekdays[date.getDay()];
+};
+
+const formatHoverMessageTime = (sentAt: string) => {
+  const sentDate = new Date(sentAt);
+  const now = new Date();
+  const time = sentDate.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const diffDays = getDayDiff(sentDate, now);
+
+  if (diffDays === 0) {
+    return time;
+  }
+
+  if (diffDays === 1) {
+    return `${time} Hôm qua`;
+  }
+
+  if (
+    diffDays > 1 &&
+    diffDays <= 7 &&
+    sentDate.getFullYear() === now.getFullYear()
+  ) {
+    return `${time} ${formatWeekday(sentDate)}`;
+  }
+
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+  };
+
+  if (sentDate.getFullYear() !== now.getFullYear()) {
+    dateOptions.year = "numeric";
+  }
+
+  return `${time} ${sentDate.toLocaleDateString("vi-VN", dateOptions)}`;
+};
+
+const formatSeenTooltip = (readerName: string, seenAt: string) => {
+  const seenDate = new Date(seenAt);
+  const now = new Date();
+  const time = seenDate.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const isSameDay =
+    seenDate.getDate() === now.getDate() &&
+    seenDate.getMonth() === now.getMonth() &&
+    seenDate.getFullYear() === now.getFullYear();
+
+  if (isSameDay) {
+    return `${readerName} đã xem lúc ${time}`;
+  }
+
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfSeenDay = new Date(
+    seenDate.getFullYear(),
+    seenDate.getMonth(),
+    seenDate.getDate(),
+  );
+  const diffDays = Math.abs(
+    Math.round(
+      (startOfSeenDay.getTime() - startOfToday.getTime()) /
+        (1000 * 60 * 60 * 24),
+    ),
+  );
+
+  if (diffDays <= 7 && seenDate.getFullYear() === now.getFullYear()) {
+    const weekday = seenDate.toLocaleDateString("vi-VN", {
+      weekday: "long",
+    });
+
+    return `${readerName} đã xem lúc ${time} ${weekday}`;
+  }
+
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+  };
+
+  if (seenDate.getFullYear() !== now.getFullYear()) {
+    dateOptions.year = "numeric";
+  }
+
+  const date = seenDate.toLocaleDateString("vi-VN", dateOptions);
+
+  return `${readerName} đã xem lúc ${time} ${date}`;
+};
+
 const MessageItem = ({
   message,
   index,
@@ -43,7 +164,12 @@ const MessageItem = ({
   const { recallMessage, reactToMessage, setReplyingTo } = useChatStore();
   const { user } = useAuthStore();
   const readersWhoSeenThis = (selectedConvo.seenBy ?? []).filter(
-    (s) => s.userId?._id !== user?._id && s.messageId === message._id
+    (s) => {
+      const seenUserId =
+        typeof s.userId === "string" ? s.userId : s.userId?._id;
+
+      return seenUserId !== user?._id && s.messageId === message._id;
+    },
   );
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -510,25 +636,21 @@ const MessageItem = ({
                     message.isOwn ? "flex-row-reverse" : "flex-row",
                   )}
                 >
-                  <span>
-                    {new Date(message.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
-                  </span>
+                  <span>{formatHoverMessageTime(message.createdAt)}</span>
 
                   {/* Reaction Picker Dropdown */}
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-smooth shrink-0 cursor-pointer"
-                        title="Thả cảm xúc"
-                      >
-                        <Smile className="size-3.5" />
-                      </Button>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-smooth shrink-0 cursor-pointer"
+                          title="Thả cảm xúc"
+                        />
+                      }
+                    >
+                      <Smile className="size-3.5" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align={message.isOwn ? "end" : "start"}
@@ -628,17 +750,17 @@ const MessageItem = ({
             )}
 
             {/* seen/ delivered */}
-            {message.isOwn && message._id === selectedConvo.lastMessage?._id && (
+            {message.isOwn &&
+              message._id === selectedConvo.lastMessage?._id &&
+              lastMessageStatus === "delivered" && (
               <Badge
                 variant="outline"
                 className={cn(
                   "text-xs px-1.5 py-0.5 h-4 border-0",
-                  lastMessageStatus === "seen"
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground",
+                  "bg-muted text-muted-foreground",
                 )}
               >
-                {lastMessageStatus}
+                Đã gửi
               </Badge>
             )}
 
@@ -647,32 +769,39 @@ const MessageItem = ({
               <div
                 className={cn(
                   "flex items-center gap-1 mt-1",
-                  message.isOwn ? "justify-end mr-1" : "justify-start ml-1"
+                  message.isOwn ? "justify-end mr-1 self-end" : "justify-start ml-1 self-start",
                 )}
               >
                 {readersWhoSeenThis.map((reader) => {
-                  if (!reader.userId) return null;
-                  const timeStr = new Date(reader.seenAt).toLocaleTimeString("vi-VN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-                  const dateStr = new Date(reader.seenAt).toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  });
+                  if (!reader.userId || typeof reader.userId === "string") return null;
+                  const tooltip = formatSeenTooltip(
+                    reader.userId.displayName,
+                    reader.seenAt,
+                  );
+
                   return (
-                    <div
-                      key={reader.userId._id}
-                      title={`${reader.userId.displayName} đã xem lúc ${timeStr} ngày ${dateStr}`}
-                      className="cursor-help hover:scale-110 transition-transform select-none"
-                    >
-                      <UserAvatar
-                        type="chat"
-                        name={reader.userId.displayName}
-                        avatarUrl={reader.userId.avatarUrl ?? undefined}
-                        className="size-4 rounded-full border border-background shadow-sm"
-                      />
-                    </div>
+                    <Tooltip key={reader.userId._id}>
+                      <TooltipTrigger
+                        render={
+                          <div className="cursor-help hover:scale-110 transition-transform select-none" />
+                        }
+                      >
+                        <UserAvatar
+                          type="chat"
+                          name={reader.userId.displayName}
+                          avatarUrl={reader.userId.avatarUrl ?? undefined}
+                          className="size-4 rounded-full border border-background shadow-sm"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent
+                        align="start"
+                        side="bottom"
+                        sideOffset={6}
+                        className="max-w-56 justify-start text-left leading-snug"
+                      >
+                        {tooltip}
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>

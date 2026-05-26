@@ -1,3 +1,17 @@
+import Conversation from "../models/Conversation.js";
+
+const formatUnreadCounts = (unreadCounts) => {
+  if (!unreadCounts) {
+    return {};
+  }
+
+  if (unreadCounts instanceof Map) {
+    return Object.fromEntries(unreadCounts);
+  }
+
+  return unreadCounts;
+};
+
 export const updateConversationAfterCreateMessage = async (
   conversation,
   message,
@@ -45,14 +59,23 @@ export const updateConversationAfterCreateMessage = async (
   }
 };
 
-export const emitNewMessage = (io, conversation, message) => {
+export const emitNewMessage = async (io, conversation, message) => {
+  const populatedConversation = await Conversation.findById(conversation._id)
+    .select("_id lastMessage lastMessageAt seenBy unreadCounts")
+    .populate({ path: "seenBy.userId", select: "displayName avatarUrl" })
+    .lean();
+
+  const conversationPayload = populatedConversation ?? {
+    _id: conversation._id,
+    lastMessage: conversation.lastMessage,
+    lastMessageAt: conversation.lastMessageAt,
+    seenBy: conversation.seenBy,
+    unreadCounts: formatUnreadCounts(conversation.unreadCounts),
+  };
+
   io.to(conversation._id.toString()).emit("new-message", {
     message,
-    conversation: {
-      _id: conversation._id,
-      lastMessage: conversation.lastMessage,
-      lastMessageAt: conversation.lastMessageAt,
-    },
-    unreadCounts: conversation.unreadCounts,
+    conversation: conversationPayload,
+    unreadCounts: formatUnreadCounts(conversationPayload.unreadCounts),
   });
 };

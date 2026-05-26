@@ -282,6 +282,7 @@ export const markAsSeen = async (req, res) => {
     const populated = await Conversation.findById(conversationId)
       .populate({ path: "participants.userId", select: "displayName avatarUrl" })
       .populate({ path: "seenBy.userId", select: "displayName avatarUrl" })
+      .populate({ path: "lastMessage.senderId", select: "displayName avatarUrl" })
       .lean();
 
     io.to(conversationId).emit("read-message", {
@@ -291,7 +292,9 @@ export const markAsSeen = async (req, res) => {
         content: populated?.lastMessage.content,
         createdAt: populated?.lastMessage.createdAt,
         sender: {
-          _id: populated?.lastMessage.senderId,
+          _id: populated?.lastMessage.senderId?._id ?? populated?.lastMessage.senderId,
+          displayName: populated?.lastMessage.senderId?.displayName ?? "",
+          avatarUrl: populated?.lastMessage.senderId?.avatarUrl ?? null,
         },
       },
     });
@@ -478,7 +481,7 @@ export const addGroupMembers = async (req, res) => {
     const formatted = formatConversation(conversation);
 
     io.to(conversationId).emit("group-updated", formatted);
-    emitNewMessage(io, conversation, systemMessage);
+    await emitNewMessage(io, conversation, systemMessage);
     newMemberIds.forEach((memberId) => {
       io.to(memberId).emit("new-group", formatted);
     });
@@ -570,7 +573,7 @@ export const updateGroupName = async (req, res) => {
     const formatted = formatConversation(conversation);
 
     io.to(conversationId).emit("group-updated", formatted);
-    emitNewMessage(io, conversation, systemMessage);
+    await emitNewMessage(io, conversation, systemMessage);
 
     return res.status(200).json({ conversation: formatted });
   } catch (error) {

@@ -2,7 +2,7 @@ import { useChatStore } from "@/stores/useChatStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import ChatWelcomeScreen from "./ChatWelcomeScreen";
 import MessageItem from "./MessageItem";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 
 const ChatWindowBody = () => {
@@ -13,10 +13,6 @@ const ChatWindowBody = () => {
     messages: allMessages,
     fetchMessages,
   } = useChatStore();
-
-  const [lastMessageStatus, setLastMessageStatus] = useState<
-    "delivered" | "seen"
-  >("delivered");
 
   const messages = allMessages[activeConversationId!]?.items ?? [];
   const reversedMessages = [...messages].reverse();
@@ -30,19 +26,23 @@ const ChatWindowBody = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // seen status
-  useEffect(() => {
+  const lastMessageStatus = useMemo<"delivered" | "seen">(() => {
     const lastMessage = selectedConvo?.lastMessage;
     if (!lastMessage) {
-      return;
+      return "delivered";
     }
 
     const seenBy = selectedConvo?.seenBy ?? [];
     const otherSeens = seenBy.filter(
-      (s) => s.userId?._id !== user?._id && s.messageId === lastMessage._id
+      (s) => {
+        const seenUserId =
+          typeof s.userId === "string" ? s.userId : s.userId?._id;
+
+        return seenUserId !== user?._id && s.messageId === lastMessage._id;
+      },
     );
 
-    setLastMessageStatus(otherSeens.length > 0 ? "seen" : "delivered");
+    return otherSeens.length > 0 ? "seen" : "delivered";
   }, [selectedConvo, user]);
 
   // kéo xuống dưới khi load convo
@@ -94,7 +94,7 @@ const ChatWindowBody = () => {
         container.scrollTop = scrollTop;
       });
     }
-  }, [messages.length]);
+  }, [key, messages.length]);
 
   if (!selectedConvo) {
     return <ChatWelcomeScreen />;

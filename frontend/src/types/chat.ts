@@ -6,11 +6,13 @@ export interface Participant {
 }
 
 export interface SeenUser {
-  userId: {
-    _id: string;
-    displayName: string;
-    avatarUrl?: string | null;
-  };
+  userId:
+    | string
+    | {
+        _id: string;
+        displayName: string;
+        avatarUrl?: string | null;
+      };
   seenAt: string;
   messageId: string;
 }
@@ -26,11 +28,13 @@ export interface LastMessage {
   imgUrl?: string | null;
   imgUrls?: string[] | null;
   createdAt: string;
-  sender: {
-    _id: string;
-    displayName: string;
-    avatarUrl?: string | null;
-  };
+  sender:
+    | string
+    | {
+        _id: string;
+        displayName: string;
+        avatarUrl?: string | null;
+      };
 }
 
 export interface Conversation {
@@ -61,6 +65,7 @@ export interface Message {
   conversationId: string;
   senderId: string;
   content: string | null;
+  title?: string | null;
   messageType?: "user" | "system" | "post";
   imgUrl?: string | null;
   imgUrls?: string[] | null;

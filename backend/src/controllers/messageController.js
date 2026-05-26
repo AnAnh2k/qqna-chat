@@ -51,7 +51,7 @@ export const sendDirectMessage = async (req, res) => {
 
     await conversation.save();
 
-    emitNewMessage(io, conversation, populatedMessage);
+    await emitNewMessage(io, conversation, populatedMessage);
 
     return res.status(201).json({ message: populatedMessage });
   } catch (error) {
@@ -103,7 +103,7 @@ export const sendGroupMessage = async (req, res) => {
     updateConversationAfterCreateMessage(conversation, populatedMessage, senderId);
 
     await conversation.save();
-    emitNewMessage(io, conversation, populatedMessage);
+    await emitNewMessage(io, conversation, populatedMessage);
 
     const conversationName = conversation.group?.name || "nhóm";
     mentions.forEach((mentionedUserId) => {
