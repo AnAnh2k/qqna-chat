@@ -250,7 +250,37 @@ export const useChatStore = create<ChatState>()(
             return;
           }
 
-          if ((convo.unreadCounts?.[user._id] ?? 0) === 0) {
+          const lastMsg = convo.lastMessage;
+          if (!lastMsg) {
+            return;
+          }
+
+          const isLastMsgOwn =
+            lastMsg.sender?._id === user._id ||
+            (lastMsg.sender as any) === user._id;
+          const mySeen = (convo.seenBy ?? []).find(
+            (s) =>
+              s.userId?._id === user._id ||
+              (s.userId as any) === user._id,
+          );
+          const alreadySeen = mySeen && mySeen.messageId === lastMsg._id;
+
+          if (isLastMsgOwn || alreadySeen) {
+            if ((convo.unreadCounts?.[user._id] ?? 0) > 0) {
+              set((state) => ({
+                conversations: state.conversations.map((c) =>
+                  c._id === activeConversationId
+                    ? {
+                        ...c,
+                        unreadCounts: {
+                          ...c.unreadCounts,
+                          [user._id]: 0,
+                        },
+                      }
+                    : c,
+                ),
+              }));
+            }
             return;
           }
 
@@ -258,7 +288,7 @@ export const useChatStore = create<ChatState>()(
 
           set((state) => ({
             conversations: state.conversations.map((c) =>
-              c._id === activeConversationId && c.lastMessage
+              c._id === activeConversationId
                 ? {
                     ...c,
                     unreadCounts: {

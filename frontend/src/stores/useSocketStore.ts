@@ -63,13 +63,13 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         unreadCounts,
       };
 
+      useChatStore.getState().updateConversation(updatedConversation);
+
       if (
         useChatStore.getState().activeConversationId === message.conversationId
       ) {
         useChatStore.getState().markAsSeen();
       }
-
-      useChatStore.getState().updateConversation(updatedConversation);
     });
 
     // read message
