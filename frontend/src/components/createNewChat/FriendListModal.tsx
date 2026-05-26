@@ -24,7 +24,7 @@ const FriendListModal = () => {
   const groupConversations = conversations.filter((c) => c.type === "group");
 
   return (
-    <DialogContent className="max-w-md">
+    <DialogContent className="max-w-md sm:max-w-md w-full overflow-hidden flex flex-col">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 text-xl capitalize">
           <MessageCircleMore className="size-5" />
@@ -33,7 +33,7 @@ const FriendListModal = () => {
       </DialogHeader>
 
       {/* Tabs chuyển đổi giữa bạn bè và danh sách nhóm */}
-      <div className="flex gap-2 p-1 bg-muted rounded-lg mb-3">
+      <div className="flex gap-2 p-1 bg-muted rounded-lg mb-3 w-full">
         <button
           className={cn(
             "flex-1 py-1.5 text-xs font-semibold rounded-md transition-smooth",
@@ -59,9 +59,9 @@ const FriendListModal = () => {
       </div>
 
       {/* Nội dung danh sách tương ứng */}
-      <div>
+      <div className="w-full min-w-0">
         {activeTab === "friends" ? (
-          <div className="space-y-2 max-h-60 overflow-y-auto p-1">
+          <div className="space-y-2 max-h-60 overflow-y-auto p-1 w-full min-w-0 beautiful-scrollbar">
             <h1 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
               danh sách bạn bè
             </h1>
@@ -72,11 +72,11 @@ const FriendListModal = () => {
                 render={
                   <Card
                     onClick={() => handleAddConversation(friend._id)}
-                    className="p-3 cursor-pointer transition-smooth hover:shadow-soft hover:bg-muted/30 group/friendCard"
+                    className="p-3 cursor-pointer transition-smooth hover:shadow-soft hover:bg-muted/30 group/friendCard w-full min-w-0"
                   />
                 }
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full min-w-0">
                   {/* avatar */}
                   <div className="relative">
                     <UserAvatar
@@ -107,7 +107,7 @@ const FriendListModal = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-2 max-h-60 overflow-y-auto p-1">
+          <div className="space-y-2 max-h-60 overflow-y-auto p-1 w-full min-w-0 beautiful-scrollbar">
             <h1 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
               danh sách nhóm của bạn
             </h1>
@@ -118,11 +118,11 @@ const FriendListModal = () => {
                 render={
                   <Card
                     onClick={() => handleSelectGroup(group._id)}
-                    className="p-3 cursor-pointer transition-smooth hover:shadow-soft hover:bg-muted/30 group/groupCard"
+                    className="p-3 cursor-pointer transition-smooth hover:shadow-soft hover:bg-muted/30 group/groupCard w-full min-w-0"
                   />
                 }
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full min-w-0">
                   {/* avatar */}
                   <div className="relative">
                     <GroupChatAvatar
