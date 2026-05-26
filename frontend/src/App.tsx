@@ -12,6 +12,8 @@ import { useEffect } from "react";
 import { useAuthStore } from "./stores/useAuthStore";
 import { useSocketStore } from "./stores/useSocketStore";
 import ServerWarmup from "./components/common/ServerWarmup";
+import DocumentTitle from "./components/common/DocumentTitle";
+import { startPagePresenceTracking } from "./lib/pagePresence";
 
 function App() {
   const { isDark, setTheme } = useThemeStore();
@@ -20,6 +22,8 @@ function App() {
   useEffect(() => {
     setTheme(isDark);
   }, [isDark]);
+
+  useEffect(() => startPagePresenceTracking(), []);
 
   useEffect(() => {
     if (accessToken) {
@@ -32,6 +36,7 @@ function App() {
   return (
     <ServerWarmup>
       <Toaster richColors position="top-right" closeButton={true} />
+      <DocumentTitle />
       <ProfileDialog />
       <BrowserRouter>
         <Routes>

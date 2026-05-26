@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useAuthStore } from "./useAuthStore";
 import { useSocketStore } from "./useSocketStore";
+import { playActionSound } from "@/lib/soundEffects";
 
 const getConversationTime = (conversation: Conversation) => {
   const timestamp =
@@ -32,7 +33,14 @@ export const useChatStore = create<ChatState>()(
       loading: false,
       replyingTo: null,
 
-      setActiveConversation: (id) => set({ activeConversationId: id }),
+      setActiveConversation: (id) => {
+        const currentId = get().activeConversationId;
+        set({ activeConversationId: id });
+
+        if (id && id !== currentId) {
+          playActionSound("select");
+        }
+      },
       reset: () => {
         set({
           conversations: [],
@@ -120,6 +128,7 @@ export const useChatStore = create<ChatState>()(
             replyTo,
           );
           set({ replyingTo: null });
+          playActionSound("send");
         } catch (error) {
           console.error("Lỗi xảy ra khi gửi direct message", error);
         }
@@ -146,6 +155,7 @@ export const useChatStore = create<ChatState>()(
             replyTo,
           );
           set({ replyingTo: null });
+          playActionSound("send");
         } catch (error) {
           console.error("Lỗi xảy ra gửi group message", error);
         }
@@ -322,6 +332,7 @@ export const useChatStore = create<ChatState>()(
           );
 
           get().addConvo(conversation);
+          playActionSound("create");
 
           useSocketStore
             .getState()
@@ -357,6 +368,7 @@ export const useChatStore = create<ChatState>()(
               activeConversationId: activeId,
             };
           });
+          playActionSound("remove");
         } catch (error) {
           console.error(
             "Lỗi xảy ra khi gọi clearConversation trong store",
@@ -371,6 +383,7 @@ export const useChatStore = create<ChatState>()(
             memberIds,
           );
           get().updateConversation(conversation);
+          playActionSound("success");
         } catch (error) {
           console.error("Lỗi xảy ra khi thêm thành viên nhóm trong store", error);
           throw error;
@@ -380,6 +393,7 @@ export const useChatStore = create<ChatState>()(
         try {
           await chatService.leaveGroup(conversationId);
           get().removeConversation(conversationId);
+          playActionSound("remove");
         } catch (error) {
           console.error("Lỗi xảy ra khi rời nhóm trong store", error);
           throw error;
@@ -389,6 +403,7 @@ export const useChatStore = create<ChatState>()(
         try {
           await chatService.disbandGroup(conversationId);
           get().removeConversation(conversationId);
+          playActionSound("remove");
         } catch (error) {
           console.error("Lỗi xảy ra khi giải tán nhóm trong store", error);
           throw error;
@@ -398,6 +413,7 @@ export const useChatStore = create<ChatState>()(
         try {
           const conversation = await chatService.renameGroup(conversationId, name);
           get().updateConversation(conversation);
+          playActionSound("success");
         } catch (error) {
           console.error("Lỗi xảy ra khi đổi tên nhóm trong store", error);
           throw error;
@@ -410,6 +426,7 @@ export const useChatStore = create<ChatState>()(
             file,
           );
           get().updateConversation(conversation);
+          playActionSound("success");
         } catch (error) {
           console.error("Lỗi xảy ra khi upload avatar nhóm trong store", error);
           throw error;
@@ -421,6 +438,7 @@ export const useChatStore = create<ChatState>()(
       recallMessage: async (messageId) => {
         try {
           await chatService.recallMessage(messageId);
+          playActionSound("remove");
         } catch (error) {
           console.error("Lỗi xảy ra khi recallMessage trong store", error);
           throw error;
@@ -553,6 +571,7 @@ export const useChatStore = create<ChatState>()(
       reactToMessage: async (messageId, emoji) => {
         try {
           await chatService.reactToMessage(messageId, emoji);
+          playActionSound("react");
         } catch (error) {
           console.error("Lỗi xảy ra khi reactToMessage trong store", error);
           throw error;

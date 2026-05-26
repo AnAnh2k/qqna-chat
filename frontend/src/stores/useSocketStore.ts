@@ -5,8 +5,17 @@ import type { SocketState } from "@/types/store";
 import { useChatStore } from "./useChatStore";
 import { useFriendStore } from "./useFriendStore";
 import { toast } from "sonner";
+import { playMessageSound } from "@/lib/notificationSound";
+import { useNotificationSettingsStore } from "./useNotificationSettingsStore";
+import { hasVisibleQQNATab } from "@/lib/pagePresence";
 
 const baseURL = import.meta.env.VITE_SOCKET_URL;
+
+const getMessagePreview = (content?: string | null, imgUrl?: string | null) => {
+  if (content?.trim()) return content;
+  if (imgUrl) return "Đã gửi một hình ảnh";
+  return "Bạn có tin nhắn mới";
+};
 
 export const useSocketStore = create<SocketState>((set, get) => ({
   socket: null,
@@ -64,6 +73,43 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       };
 
       useChatStore.getState().updateConversation(updatedConversation);
+
+      const isOwnMessage =
+        message.senderId?.toString() === useAuthStore.getState().user?._id;
+
+      if (!isOwnMessage) {
+        const {
+          desktopNotificationsEnabled,
+          messageSoundId,
+          messageSoundEnabled,
+          messageToastEnabled,
+          soundVolume,
+        } = useNotificationSettingsStore.getState();
+        const senderName = senderParticipant?.displayName || "QQNA Chat";
+        const preview = getMessagePreview(message.content, message.imgUrl);
+
+        if (messageSoundEnabled) {
+          playMessageSound(soundVolume, messageSoundId).catch((error) => {
+            console.error("Không thể phát âm báo tin nhắn:", error);
+          });
+        }
+
+        if (messageToastEnabled) {
+          toast.info(`${senderName}: ${preview}`);
+        }
+
+        if (
+          desktopNotificationsEnabled &&
+          !hasVisibleQQNATab() &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification(senderName, {
+            body: preview,
+            icon: senderParticipant?.avatarUrl ?? "/logo.svg",
+          });
+        }
+      }
 
       if (
         useChatStore.getState().activeConversationId === message.conversationId

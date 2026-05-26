@@ -1,6 +1,7 @@
 import { friendService } from "@/services/friendService";
 import type { FriendState } from "@/types/store";
 import { create } from "zustand";
+import { playActionSound } from "@/lib/soundEffects";
 
 export const useFriendStore = create<FriendState>((set) => ({
   friends: [],
@@ -25,6 +26,7 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       set({ loading: true });
       const resultMessage = await friendService.sendFriendRequest(to, message);
+      playActionSound("send");
       return resultMessage;
     } catch (error) {
       console.error("Lỗi xảy ra khi addFriend", error);
@@ -55,6 +57,7 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       set({ loading: true });
       await friendService.acceptRequest(requestId);
+      playActionSound("success");
 
       set((state) => ({
         receivedList: state.receivedList.filter((r) => r._id !== requestId),
@@ -67,6 +70,7 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       set({ loading: true });
       await friendService.declineRequest(requestId);
+      playActionSound("remove");
 
       set((state) => ({
         receivedList: state.receivedList.filter((r) => r._id !== requestId),
@@ -94,6 +98,7 @@ export const useFriendStore = create<FriendState>((set) => ({
     try {
       set({ loading: true });
       await friendService.unfriend(friendId);
+      playActionSound("remove");
       set((state) => ({
         friends: state.friends.filter((f) => f._id !== friendId),
       }));

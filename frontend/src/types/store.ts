@@ -2,6 +2,7 @@ import type { Socket } from "socket.io-client";
 import type { Conversation, Message, Reaction } from "./chat";
 import type { Friend, FriendRequest, User } from "./user";
 import type { UpdateProfilePayload } from "@/services/userService";
+import type { MessageSoundId } from "@/lib/notificationSound";
 
 export interface AuthState {
   accessToken: string | null;
@@ -28,6 +29,21 @@ export interface ThemeState {
   isDark: boolean;
   toggleTheme: () => void;
   setTheme: (dark: boolean) => void;
+}
+
+export interface NotificationSettingsState {
+  messageSoundEnabled: boolean;
+  actionSoundEnabled: boolean;
+  messageToastEnabled: boolean;
+  desktopNotificationsEnabled: boolean;
+  messageSoundId: MessageSoundId;
+  soundVolume: number;
+  setMessageSoundEnabled: (enabled: boolean) => void;
+  setActionSoundEnabled: (enabled: boolean) => void;
+  setMessageToastEnabled: (enabled: boolean) => void;
+  setDesktopNotificationsEnabled: (enabled: boolean) => Promise<void>;
+  setMessageSoundId: (soundId: MessageSoundId) => void;
+  setSoundVolume: (volume: number) => void;
 }
 
 export interface ChatState {
