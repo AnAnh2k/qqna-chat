@@ -79,7 +79,7 @@ export const createConversation = async (req, res) => {
     await conversation.populate([
       { path: "participants.userId", select: "displayName avatarUrl" },
       {
-        path: "seenBy",
+        path: "seenBy.userId",
         select: "displayName avatarUrl",
       },
       { path: "lastMessage.senderId", select: "displayName avatarUrl" },
@@ -128,7 +128,7 @@ export const getConversations = async (req, res) => {
         select: "displayName avatarUrl",
       })
       .populate({
-        path: "seenBy",
+        path: "seenBy.userId",
         select: "displayName avatarUrl",
       });
 
@@ -244,7 +244,7 @@ export const markAsSeen = async (req, res) => {
     const { conversationId } = req.params;
     const userId = req.user._id.toString();
 
-    const conversation = await Conversation.findById(conversationId).lean();
+    const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
       return res.status(404).json({ message: "Conversation không tồn tại" });
@@ -260,33 +260,46 @@ export const markAsSeen = async (req, res) => {
       return res.status(200).json({ message: "Sender không cần mark as seen" });
     }
 
-    const updated = await Conversation.findByIdAndUpdate(
-      conversationId,
-      {
-        $addToSet: { seenBy: userId },
-        $set: { [`unreadCounts.${userId}`]: 0 },
-      },
-      {
-        returnDocument: "after",
-      },
+    const existingIndex = conversation.seenBy.findIndex(
+      (s) => s.userId && s.userId.toString() === userId
     );
 
+    if (existingIndex > -1) {
+      conversation.seenBy[existingIndex].seenAt = new Date();
+      conversation.seenBy[existingIndex].messageId = last._id.toString();
+    } else {
+      conversation.seenBy.push({
+        userId,
+        seenAt: new Date(),
+        messageId: last._id.toString(),
+      });
+    }
+
+    conversation.unreadCounts.set(userId, 0);
+
+    await conversation.save();
+
+    const populated = await Conversation.findById(conversationId)
+      .populate({ path: "participants.userId", select: "displayName avatarUrl" })
+      .populate({ path: "seenBy.userId", select: "displayName avatarUrl" })
+      .lean();
+
     io.to(conversationId).emit("read-message", {
-      conversation: updated,
+      conversation: populated,
       lastMessage: {
-        _id: updated?.lastMessage._id,
-        content: updated?.lastMessage.content,
-        createdAt: updated?.lastMessage.createdAt,
+        _id: populated?.lastMessage._id,
+        content: populated?.lastMessage.content,
+        createdAt: populated?.lastMessage.createdAt,
         sender: {
-          _id: updated?.lastMessage.senderId,
+          _id: populated?.lastMessage.senderId,
         },
       },
     });
 
     return res.status(200).json({
       message: "Marked as seen",
-      seenBy: updated?.sennBy || [],
-      myUnreadCount: updated?.unreadCounts[userId] || 0,
+      seenBy: populated?.seenBy || [],
+      myUnreadCount: populated?.unreadCounts?.[userId] || 0,
     });
   } catch (error) {
     console.error("Lỗi khi mark as seen", error);
@@ -357,7 +370,7 @@ export const leaveGroup = async (req, res) => {
     await conversation.populate([
       { path: "participants.userId", select: "displayName avatarUrl" },
       { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy", select: "displayName avatarUrl" },
+      { path: "seenBy.userId", select: "displayName avatarUrl" },
     ]);
 
     const participants = (conversation.participants || []).map((p) => ({
@@ -445,7 +458,7 @@ export const addGroupMembers = async (req, res) => {
     await conversation.populate([
       { path: "participants.userId", select: "displayName avatarUrl" },
       { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy", select: "displayName avatarUrl" },
+      { path: "seenBy.userId", select: "displayName avatarUrl" },
     ]);
 
     const addedNames = conversation.participants
@@ -551,7 +564,7 @@ export const updateGroupName = async (req, res) => {
     await conversation.populate([
       { path: "participants.userId", select: "displayName avatarUrl" },
       { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy", select: "displayName avatarUrl" },
+      { path: "seenBy.userId", select: "displayName avatarUrl" },
     ]);
 
     const formatted = formatConversation(conversation);

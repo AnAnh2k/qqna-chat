@@ -81,8 +81,18 @@ const conversationSchema = new mongoose.Schema(
     },
     seenBy: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        seenAt: {
+          type: Date,
+          default: Date.now,
+        },
+        messageId: {
+          type: String,
+        },
       },
     ],
     lastMessage: {

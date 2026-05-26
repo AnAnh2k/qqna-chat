@@ -6,9 +6,13 @@ export interface Participant {
 }
 
 export interface SeenUser {
-  _id: string;
-  displayName?: string;
-  avatarUrl?: string | null;
+  userId: {
+    _id: string;
+    displayName: string;
+    avatarUrl?: string | null;
+  };
+  seenAt: string;
+  messageId: string;
 }
 
 export interface Group {

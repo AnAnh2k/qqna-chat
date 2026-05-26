@@ -42,6 +42,9 @@ const MessageItem = ({
   const { viewProfile } = useUserStore();
   const { recallMessage, reactToMessage, setReplyingTo } = useChatStore();
   const { user } = useAuthStore();
+  const readersWhoSeenThis = (selectedConvo.seenBy ?? []).filter(
+    (s) => s.userId?._id !== user?._id && s.messageId === message._id
+  );
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -637,6 +640,42 @@ const MessageItem = ({
               >
                 {lastMessageStatus}
               </Badge>
+            )}
+
+            {/* Readers Who Seen This (Seen Cursors) */}
+            {readersWhoSeenThis.length > 0 && (
+              <div
+                className={cn(
+                  "flex items-center gap-1 mt-1",
+                  message.isOwn ? "justify-end mr-1" : "justify-start ml-1"
+                )}
+              >
+                {readersWhoSeenThis.map((reader) => {
+                  if (!reader.userId) return null;
+                  const timeStr = new Date(reader.seenAt).toLocaleTimeString("vi-VN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const dateStr = new Date(reader.seenAt).toLocaleDateString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  });
+                  return (
+                    <div
+                      key={reader.userId._id}
+                      title={`${reader.userId.displayName} đã xem lúc ${timeStr} ngày ${dateStr}`}
+                      className="cursor-help hover:scale-110 transition-transform select-none"
+                    >
+                      <UserAvatar
+                        type="chat"
+                        name={reader.userId.displayName}
+                        avatarUrl={reader.userId.avatarUrl ?? undefined}
+                        className="size-4 rounded-full border border-background shadow-sm"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

@@ -4,8 +4,23 @@ export const updateConversationAfterCreateMessage = async (
   senderId,
 ) => {
   try {
+    const existingIndex = conversation.seenBy.findIndex(
+      (s) => s.userId && s.userId.toString() === senderId.toString()
+    );
+
+    if (existingIndex > -1) {
+      conversation.seenBy[existingIndex].seenAt = new Date();
+      conversation.seenBy[existingIndex].messageId = message._id.toString();
+    } else {
+      conversation.seenBy.push({
+        userId: senderId,
+        seenAt: new Date(),
+        messageId: message._id.toString(),
+      });
+    }
+
     conversation.set({
-      seenBy: [],
+      seenBy: conversation.seenBy,
       lastMessageAt: message.createdAt,
       lastMessage: {
         _id: message._id,
