@@ -2,13 +2,14 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import type { Conversation, Participant } from "@/types/chat";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
-import { AtSign, ImagePlus, Send, UserPlus, Users, X, Loader2 } from "lucide-react";
+import { AtSign, ImagePlus, Send, UserPlus, Users, X, Loader2, FileText } from "lucide-react";
 import { Input } from "../ui/input";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "@/stores/useChatStore";
 import { useFriendStore } from "@/stores/useFriendStore";
 import { toast } from "sonner";
 import UserAvatar from "./UserAvatar";
+import CreatePostDialog from "./CreatePostDialog";
 
 type MentionSuggestion =
   | { type: "all"; _id: "all"; displayName: "mọi người" }
@@ -28,6 +29,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const imagePreviewUrlRef = useRef<string | null>(null);
@@ -227,6 +229,29 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     }
   };
 
+  const handleSendPost = async (title: string, content: string) => {
+    try {
+      if (selectedConvo.type === "direct") {
+        const otherUser = selectedConvo.participants.filter(
+          (p) => p._id !== user._id,
+        )[0];
+        await sendDirectMessage(otherUser._id, content, undefined, title, "post");
+      } else {
+        await sendGroupMessage(
+          selectedConvo._id,
+          content,
+          undefined,
+          [],
+          title,
+          "post",
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -278,6 +303,18 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           ) : (
             <ImagePlus className="size-4" />
           )}
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="hover:bg-primary/10 transition-smooth shrink-0 text-muted-foreground hover:text-primary"
+          onClick={() => setPostDialogOpen(true)}
+          disabled={uploading}
+          title="Soạn bài viết/câu chuyện"
+        >
+          <FileText className="size-4" />
         </Button>
 
         <div className="flex-1 relative">
@@ -353,6 +390,11 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           <Send className="size-4 text-white" />
         </Button>
       </div>
+      <CreatePostDialog
+        open={postDialogOpen}
+        setOpen={setPostDialogOpen}
+        onSend={handleSendPost}
+      />
     </div>
   );
 };

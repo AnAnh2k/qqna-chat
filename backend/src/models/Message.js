@@ -17,9 +17,13 @@ const messageSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    title: {
+      type: String,
+      trim: true,
+    },
     messageType: {
       type: String,
-      enum: ["user", "system"],
+      enum: ["user", "system", "post"],
       default: "user",
     },
     imgUrl: {

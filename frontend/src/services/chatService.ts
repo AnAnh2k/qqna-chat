@@ -27,12 +27,16 @@ export const chatService = {
     content: string = "",
     imgUrl?: string,
     conversationId?: string,
+    title?: string,
+    messageType?: string,
   ) {
     const res = await api.post("/messages/direct", {
       recipientId,
       content,
       imgUrl,
       conversationId,
+      title,
+      messageType,
     });
 
     return res.data.message;
@@ -43,12 +47,16 @@ export const chatService = {
     content: string = "",
     imgUrl?: string,
     mentionedUserIds: string[] = [],
+    title?: string,
+    messageType?: string,
   ) {
     const res = await api.post("/messages/group", {
       conversationId,
       content,
       imgUrl,
       mentionedUserIds,
+      title,
+      messageType,
     });
     return res.data.message;
   },

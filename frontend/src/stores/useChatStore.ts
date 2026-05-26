@@ -103,7 +103,7 @@ export const useChatStore = create<ChatState>()(
           set({ messageLoading: false });
         }
       },
-      sendDirectMessage: async (recipientId, content, imgUrl) => {
+      sendDirectMessage: async (recipientId, content, imgUrl, title, messageType) => {
         try {
           const { activeConversationId } = get();
           await chatService.sendDirectMessage(
@@ -111,6 +111,8 @@ export const useChatStore = create<ChatState>()(
             content,
             imgUrl,
             activeConversationId || undefined,
+            title,
+            messageType,
           );
           set((state) => ({
             conversations: state.conversations.map((c) =>
@@ -126,6 +128,8 @@ export const useChatStore = create<ChatState>()(
         content,
         imgUrl,
         mentionedUserIds,
+        title,
+        messageType,
       ) => {
         try {
           await chatService.sendGroupMessage(
@@ -133,6 +137,8 @@ export const useChatStore = create<ChatState>()(
             content,
             imgUrl,
             mentionedUserIds,
+            title,
+            messageType,
           );
           set((state) => ({
             conversations: state.conversations.map((c) =>

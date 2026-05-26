@@ -53,12 +53,16 @@ export interface ChatState {
     recipientId: string,
     content: string,
     imgUrl?: string,
+    title?: string,
+    messageType?: string,
   ) => Promise<void>;
   sendGroupMessage: (
     conversationId: string,
     content: string,
     imgUrl?: string,
     mentionedUserIds?: string[],
+    title?: string,
+    messageType?: string,
   ) => Promise<void>;
   // add message
   addMessage: (message: Message) => Promise<void>;

@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
 import { useState } from "react";
 import ConfirmDialog from "../common/ConfirmDialog";
@@ -43,6 +44,7 @@ const MessageItem = ({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [recallConfirmOpen, setRecallConfirmOpen] = useState(false);
   const [recalling, setRecalling] = useState(false);
+  const [postReaderOpen, setPostReaderOpen] = useState(false);
 
   const handleRecall = async () => {
     try {
@@ -206,6 +208,35 @@ const MessageItem = ({
                     className="max-w-[240px] max-h-[320px] w-full object-cover rounded-2xl shadow-md hover:opacity-90 transition-opacity block"
                   />
                 </button>
+              ) : message.messageType === "post" && !message.isRecalled ? (
+                <Card
+                  onClick={() => setPostReaderOpen(true)}
+                  className={cn(
+                    "cursor-pointer hover:shadow-soft transition-all duration-300 border border-primary/20 bg-gradient-glass p-3.5 flex flex-col gap-2 min-w-[220px] max-w-[280px] rounded-2xl shadow-sm",
+                    message.isOwn ? "chat-bubble-sent border-0" : "chat-bubble-received border-border/40"
+                  )}
+                >
+                  <div className="flex items-center gap-1.5 border-b border-primary/10 pb-1.5 select-none">
+                    <FileText className="size-3.5 text-primary shrink-0" />
+                    <span className="font-bold text-[10px] uppercase tracking-wider text-primary">
+                      Bài Viết
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-sm text-foreground line-clamp-2 break-all leading-snug">
+                    {message.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-3 break-all leading-relaxed whitespace-pre-line">
+                    {message.content}
+                  </p>
+                  <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/30 select-none">
+                    <span className="text-[10px] text-muted-foreground/80 font-medium">
+                      Tác giả: {message.isOwn ? "Bạn" : (participant?.displayName || "QQNA")}
+                    </span>
+                    <span className="text-[10px] text-primary font-bold hover:underline">
+                      Đọc tiếp &rarr;
+                    </span>
+                  </div>
+                </Card>
               ) : (
                 <Card
                   className={cn(
@@ -324,6 +355,52 @@ const MessageItem = ({
         icon={Undo2}
         onConfirm={handleRecall}
       />
+      <Dialog open={postReaderOpen} onOpenChange={setPostReaderOpen}>
+        <DialogContent className="max-w-3xl bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
+          <DialogHeader className="mb-2 shrink-0 border-b border-border/40 pb-4">
+            <DialogTitle className="text-xl font-black text-slate-800 dark:text-slate-100 break-all leading-snug flex items-start gap-2.5">
+              <FileText className="size-6 text-primary shrink-0 mt-0.5" />
+              <span>{message.title}</span>
+            </DialogTitle>
+            <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+              <UserAvatar
+                type="chat"
+                name={participant?.displayName ?? (message.isOwn ? "Bạn" : "QQNA")}
+                avatarUrl={participant?.avatarUrl ?? undefined}
+                className="size-5 shrink-0"
+              />
+              <span className="font-semibold text-foreground">
+                {message.isOwn ? "Bạn" : (participant?.displayName || "QQNA")}
+              </span>
+              <span>•</span>
+              <span>Đăng lúc {new Date(message.createdAt).toLocaleString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+              })}</span>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-2 pr-1 beautiful-scrollbar min-h-0">
+            <div className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap break-words font-normal">
+              {message.content}
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4 shrink-0 border-t border-border/40 pt-4 flex sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPostReaderOpen(false)}
+              className="px-5 font-semibold text-xs rounded-lg"
+            >
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

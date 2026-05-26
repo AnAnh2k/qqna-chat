@@ -9,12 +9,12 @@ import { uploadImageFromBuffer } from "../middlewares/uploadMiddleware.js";
 
 export const sendDirectMessage = async (req, res) => {
   try {
-    const { recipientId, content, conversationId, imgUrl } = req.body;
+    const { recipientId, content, conversationId, imgUrl, title, messageType } = req.body;
     const senderId = req.user._id;
 
     let conversation;
 
-    if (!content && !imgUrl) {
+    if (!content && !imgUrl && !title) {
       return res.status(400).json({ message: "Thiếu nội dung hoặc hình ảnh" });
     }
 
@@ -39,6 +39,8 @@ export const sendDirectMessage = async (req, res) => {
       senderId,
       content: content || "",
       imgUrl: imgUrl || undefined,
+      title: title || undefined,
+      messageType: messageType || "user",
     });
 
     updateConversationAfterCreateMessage(conversation, message, senderId);
@@ -56,11 +58,11 @@ export const sendDirectMessage = async (req, res) => {
 
 export const sendGroupMessage = async (req, res) => {
   try {
-    const { conversationId, content, imgUrl, mentionedUserIds = [] } = req.body;
+    const { conversationId, content, imgUrl, mentionedUserIds = [], title, messageType } = req.body;
     const senderId = req.user._id;
     const conversation = req.conversation;
 
-    if (!content && !imgUrl) {
+    if (!content && !imgUrl && !title) {
       return res.status(400).json("Thiếu nội dung hoặc hình ảnh");
     }
 
@@ -86,6 +88,8 @@ export const sendGroupMessage = async (req, res) => {
       content: content || "",
       imgUrl: imgUrl || undefined,
       mentions,
+      title: title || undefined,
+      messageType: messageType || "user",
     });
 
     updateConversationAfterCreateMessage(conversation, message, senderId);
