@@ -12,10 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, FileText } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ConfirmDialog from "../common/ConfirmDialog";
 
 interface MessageItemProps {
@@ -42,6 +42,7 @@ const MessageItem = ({
   const recallMessage = useChatStore((s) => s.recallMessage);
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [recallConfirmOpen, setRecallConfirmOpen] = useState(false);
   const [recalling, setRecalling] = useState(false);
   const [postReaderOpen, setPostReaderOpen] = useState(false);
@@ -66,6 +67,174 @@ const MessageItem = ({
       300000; // 5 phút
 
   const isGroupBreak = isShowTime || message.senderId !== prev?.senderId;
+
+  const allImages =
+    message.imgUrls && message.imgUrls.length > 0
+      ? message.imgUrls
+      : message.imgUrl
+        ? [message.imgUrl]
+        : [];
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLightboxOpen(false);
+      } else if (e.key === "ArrowLeft" && allImages.length > 1) {
+        setActiveImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+      } else if (e.key === "ArrowRight" && allImages.length > 1) {
+        setActiveImageIndex((prev) => (prev + 1) % allImages.length);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxOpen, allImages.length]);
+
+  const renderImageGrid = (roundedTopOnly: boolean) => {
+    if (allImages.length === 0) return null;
+
+    if (allImages.length === 1) {
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setActiveImageIndex(0);
+            setLightboxOpen(true);
+          }}
+          className="focus:outline-none cursor-zoom-in block w-full overflow-hidden"
+          style={{
+            borderRadius: roundedTopOnly ? "0.75rem 0.75rem 0 0" : "1rem",
+          }}
+          title="Xem ảnh phóng to"
+        >
+          <img
+            src={allImages[0]}
+            alt="Ảnh tin nhắn"
+            className="max-w-[240px] max-h-[320px] w-full object-cover hover:opacity-90 transition-opacity block"
+          />
+        </button>
+      );
+    }
+
+    if (allImages.length === 2) {
+      return (
+        <div
+          className="grid grid-cols-2 gap-1 overflow-hidden w-[240px] h-[160px]"
+          style={{
+            borderRadius: roundedTopOnly ? "0.75rem 0.75rem 0 0" : "1rem",
+          }}
+        >
+          {allImages.slice(0, 2).map((url, idx) => (
+            <button
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveImageIndex(idx);
+                setLightboxOpen(true);
+              }}
+              className="focus:outline-none cursor-zoom-in relative w-full h-full overflow-hidden"
+              title="Xem ảnh phóng to"
+            >
+              <img
+                src={url}
+                alt={`Ảnh tin nhắn ${idx + 1}`}
+                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+              />
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    if (allImages.length === 3) {
+      return (
+        <div
+          className="grid grid-cols-3 gap-1 overflow-hidden w-[240px] h-[160px]"
+          style={{
+            borderRadius: roundedTopOnly ? "0.75rem 0.75rem 0 0" : "1rem",
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveImageIndex(0);
+              setLightboxOpen(true);
+            }}
+            className="col-span-2 focus:outline-none cursor-zoom-in relative w-full h-full overflow-hidden"
+            title="Xem ảnh phóng to"
+          >
+            <img
+              src={allImages[0]}
+              alt="Ảnh tin nhắn 1"
+              className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+            />
+          </button>
+          <div className="col-span-1 grid grid-rows-2 gap-1 h-full">
+            {allImages.slice(1, 3).map((url, idx) => (
+              <button
+                key={idx + 1}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveImageIndex(idx + 1);
+                  setLightboxOpen(true);
+                }}
+                className="focus:outline-none cursor-zoom-in relative w-full h-full overflow-hidden"
+                title="Xem ảnh phóng to"
+              >
+                <img
+                  src={url}
+                  alt={`Ảnh tin nhắn ${idx + 2}`}
+                  className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 4 ảnh trở lên
+    const remainingCount = allImages.length - 4;
+    return (
+      <div
+        className="grid grid-cols-2 grid-rows-2 gap-1 overflow-hidden w-[240px] h-[180px]"
+        style={{
+          borderRadius: roundedTopOnly ? "0.75rem 0.75rem 0 0" : "1rem",
+        }}
+      >
+        {allImages.slice(0, 4).map((url, idx) => {
+          const isLastVisible = idx === 3;
+          return (
+            <button
+              key={idx}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveImageIndex(idx);
+                setLightboxOpen(true);
+              }}
+              className="focus:outline-none cursor-zoom-in relative w-full h-full overflow-hidden group/item"
+              title="Xem ảnh phóng to"
+            >
+              <img
+                src={url}
+                alt={`Ảnh tin nhắn ${idx + 1}`}
+                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+              />
+              {isLastVisible && remainingCount > 0 && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center transition-colors group-hover/item:bg-black/50">
+                  <span className="text-white font-bold text-lg select-none">
+                    +{remainingCount + 1}
+                  </span>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   const participant = selectedConvo.participants.find(
     (p: Participant) => p._id.toString() === message.senderId.toString(),
@@ -124,28 +293,64 @@ const MessageItem = ({
   }
 
   // Tin nhắn chỉ có ảnh (không có text) — không dùng Card bubble
-  const isImageOnly = !!message.imgUrl && !message.content && !message.isRecalled;
+  const isImageOnly = allImages.length > 0 && !message.content && !message.isRecalled;
 
   return (
     <>
       {/* Lightbox fullscreen */}
-      {lightboxOpen && message.imgUrl && (
+      {lightboxOpen && allImages.length > 0 && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm select-none"
           onClick={() => setLightboxOpen(false)}
         >
+          {/* Close button */}
           <button
-            className="absolute top-4 right-4 text-white bg-white/20 hover:bg-white/30 rounded-full p-2 transition-all"
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/25 rounded-full p-2.5 transition-all z-50 cursor-pointer shadow-md"
             onClick={() => setLightboxOpen(false)}
           >
             <X className="size-5" />
           </button>
+
+          {/* Indicator text (e.g. "2 / 5") */}
+          {allImages.length > 1 && (
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-black/55 text-white text-xs font-semibold px-3.5 py-1.5 rounded-full z-50 pointer-events-none tracking-wide">
+              {activeImageIndex + 1} / {allImages.length}
+            </div>
+          )}
+
+          {/* Left Navigation Arrow */}
+          {allImages.length > 1 && (
+            <button
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all z-50 cursor-pointer hover:scale-105"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+              }}
+            >
+              <ChevronLeft className="size-6" />
+            </button>
+          )}
+
+          {/* Image */}
           <img
-            src={message.imgUrl}
-            alt="Ảnh phóng to"
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            src={allImages[activeImageIndex]}
+            alt={`Ảnh phóng to ${activeImageIndex + 1}`}
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-all duration-300 animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {/* Right Navigation Arrow */}
+          {allImages.length > 1 && (
+            <button
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-3 transition-all z-50 cursor-pointer hover:scale-105"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveImageIndex((prev) => (prev + 1) % allImages.length);
+              }}
+            >
+              <ChevronRight className="size-6" />
+            </button>
+          )}
         </div>
       )}
 
@@ -197,17 +402,7 @@ const MessageItem = ({
             >
               {/* Trường hợp chỉ có ảnh — render trực tiếp không có Card */}
               {isImageOnly ? (
-                <button
-                  onClick={() => setLightboxOpen(true)}
-                  className="focus:outline-none cursor-zoom-in"
-                  title="Xem ảnh phóng to"
-                >
-                  <img
-                    src={message.imgUrl!}
-                    alt="Ảnh tin nhắn"
-                    className="max-w-[240px] max-h-[320px] w-full object-cover rounded-2xl shadow-md hover:opacity-90 transition-opacity block"
-                  />
-                </button>
+                renderImageGrid(false)
               ) : message.messageType === "post" && !message.isRecalled ? (
                 <Card
                   onClick={() => setPostReaderOpen(true)}
@@ -255,20 +450,7 @@ const MessageItem = ({
                   ) : (
                     <>
                       {/* Ảnh kèm text — click ảnh để phóng to */}
-                      {message.imgUrl && (
-                        <button
-                          onClick={() => setLightboxOpen(true)}
-                          className="focus:outline-none cursor-zoom-in block w-full"
-                          title="Xem ảnh phóng to"
-                        >
-                          <img
-                            src={message.imgUrl}
-                            alt="Ảnh tin nhắn"
-                            className="max-w-[240px] max-h-[320px] w-full object-cover block hover:opacity-90 transition-opacity"
-                            style={{ borderRadius: "0.75rem 0.75rem 0 0" }}
-                          />
-                        </button>
-                      )}
+                      {allImages.length > 0 && renderImageGrid(true)}
                       {message.content && (
                         <p className="text-sm leading-snug break-words px-2.5 py-1.5">
                           {renderMessageContent(message.content)}

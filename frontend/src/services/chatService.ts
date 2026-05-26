@@ -29,6 +29,7 @@ export const chatService = {
     conversationId?: string,
     title?: string,
     messageType?: string,
+    imgUrls?: string[],
   ) {
     const res = await api.post("/messages/direct", {
       recipientId,
@@ -37,6 +38,7 @@ export const chatService = {
       conversationId,
       title,
       messageType,
+      imgUrls,
     });
 
     return res.data.message;
@@ -49,6 +51,7 @@ export const chatService = {
     mentionedUserIds: string[] = [],
     title?: string,
     messageType?: string,
+    imgUrls?: string[],
   ) {
     const res = await api.post("/messages/group", {
       conversationId,
@@ -57,6 +60,7 @@ export const chatService = {
       mentionedUserIds,
       title,
       messageType,
+      imgUrls,
     });
     return res.data.message;
   },

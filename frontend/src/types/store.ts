@@ -55,6 +55,7 @@ export interface ChatState {
     imgUrl?: string,
     title?: string,
     messageType?: string,
+    imgUrls?: string[],
   ) => Promise<void>;
   sendGroupMessage: (
     conversationId: string,
@@ -63,6 +64,7 @@ export interface ChatState {
     mentionedUserIds?: string[],
     title?: string,
     messageType?: string,
+    imgUrls?: string[],
   ) => Promise<void>;
   // add message
   addMessage: (message: Message) => Promise<void>;

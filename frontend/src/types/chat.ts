@@ -20,6 +20,7 @@ export interface LastMessage {
   _id: string;
   content: string;
   imgUrl?: string | null;
+  imgUrls?: string[] | null;
   createdAt: string;
   sender: {
     _id: string;
@@ -53,6 +54,7 @@ export interface Message {
   content: string | null;
   messageType?: "user" | "system";
   imgUrl?: string | null;
+  imgUrls?: string[] | null;
   mentions?: string[];
   isRecalled?: boolean;
   updatedAt?: string | null;

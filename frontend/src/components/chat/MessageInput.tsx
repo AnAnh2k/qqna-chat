@@ -26,23 +26,25 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     useChatStore();
   const { friends, getFriends } = useFriendStore();
   const [value, setValue] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const imagePreviewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     getFriends();
   }, [getFriends]);
 
+  const previewsRef = useRef<string[]>([]);
+  useEffect(() => {
+    previewsRef.current = imagePreviews;
+  }, [imagePreviews]);
+
   useEffect(() => {
     return () => {
-      if (imagePreviewUrlRef.current) {
-        URL.revokeObjectURL(imagePreviewUrlRef.current);
-      }
+      previewsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
 
@@ -149,78 +151,97 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     }
   }
 
-  const clearImage = () => {
-    if (imagePreviewUrlRef.current) {
-      URL.revokeObjectURL(imagePreviewUrlRef.current);
-      imagePreviewUrlRef.current = null;
-    }
-    setSelectedImage(null);
-    setImagePreview(null);
+  const clearImages = () => {
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setSelectedImages([]);
+    setImagePreviews([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const setImageWithPreview = (file: File) => {
-    if (imagePreviewUrlRef.current) {
-      URL.revokeObjectURL(imagePreviewUrlRef.current);
-    }
+  const removeImage = (idx: number) => {
+    URL.revokeObjectURL(imagePreviews[idx]);
+    setSelectedImages((prev) => prev.filter((_, i) => i !== idx));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+  };
 
-    const url = URL.createObjectURL(file);
-    imagePreviewUrlRef.current = url;
-    setSelectedImage(file);
-    setImagePreview(url);
+  const handleAddFiles = (files: File[]) => {
+    const validImageFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (validImageFiles.length === 0) return;
+
+    const urls = validImageFiles.map((f) => URL.createObjectURL(f));
+    setSelectedImages((prev) => [...prev, ...validImageFiles]);
+    setImagePreviews((prev) => [...prev, ...urls]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Chỉ chấp nhận file ảnh!");
-      return;
-    }
-    setImageWithPreview(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    handleAddFiles(files);
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
+    const files: File[] = [];
     for (const item of Array.from(items)) {
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
-        if (file) setImageWithPreview(file);
-        break;
+        if (file) files.push(file);
       }
+    }
+    if (files.length > 0) {
+      handleAddFiles(files);
     }
   };
 
   const sendMessage = async () => {
-    if (!value.trim() && !selectedImage) return;
+    if (!value.trim() && selectedImages.length === 0) return;
     const currValue = value;
     setValue("");
 
     try {
-      let imgUrl: string | undefined;
+      let imgUrls: string[] = [];
 
-      if (selectedImage) {
+      if (selectedImages.length > 0) {
         setUploading(true);
         try {
-          imgUrl = await uploadMessageImage(selectedImage);
+          imgUrls = await Promise.all(
+            selectedImages.map((file) => uploadMessageImage(file)),
+          );
+        } catch (uploadError) {
+          console.error("Upload error", uploadError);
+          toast.error("Một số hình ảnh tải lên thất bại. Vui lòng thử lại!");
+          return;
         } finally {
           setUploading(false);
-          clearImage();
+          clearImages();
         }
       }
+
+      const singleImgUrl = imgUrls.length === 1 ? imgUrls[0] : undefined;
+      const albumImgUrls = imgUrls.length > 1 ? imgUrls : undefined;
 
       if (selectedConvo.type === "direct") {
         const otherUser = selectedConvo.participants.filter(
           (p) => p._id !== user._id,
         )[0];
-        await sendDirectMessage(otherUser._id, currValue, imgUrl);
+        await sendDirectMessage(
+          otherUser._id,
+          currValue,
+          singleImgUrl,
+          undefined,
+          undefined,
+          albumImgUrls,
+        );
       } else {
         await sendGroupMessage(
           selectedConvo._id,
           currValue,
-          imgUrl,
+          singleImgUrl,
           getMentionedUserIds(currValue),
+          undefined,
+          undefined,
+          albumImgUrls,
         );
       }
     } catch (error) {
@@ -261,22 +282,25 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
 
   return (
     <div className="flex flex-col bg-background border-t border-border/40">
-      {/* Image Preview */}
-      {imagePreview && (
-        <div className="px-3 pt-3 pb-1">
-          <div className="relative inline-block">
-            <img
-              src={imagePreview}
-              alt="preview"
-              className="max-h-32 max-w-[200px] rounded-xl object-cover border border-border/50 shadow-sm"
-            />
-            <button
-              onClick={clearImage}
-              className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center shadow hover:scale-110 transition-transform"
-            >
-              <X className="size-3" />
-            </button>
-          </div>
+      {/* Image Previews list */}
+      {imagePreviews.length > 0 && (
+        <div className="px-3 pt-3 pb-1 flex flex-wrap gap-2 max-h-32 overflow-y-auto beautiful-scrollbar">
+          {imagePreviews.map((url, idx) => (
+            <div key={idx} className="relative inline-block shrink-0">
+              <img
+                src={url}
+                alt={`preview-${idx}`}
+                className="h-16 w-16 rounded-xl object-cover border border-border/50 shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4.5 h-4.5 flex items-center justify-center shadow hover:scale-110 transition-transform cursor-pointer"
+              >
+                <X className="size-2.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -286,6 +310,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={handleFileChange}
         />
@@ -385,7 +410,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         <Button
           onClick={sendMessage}
           className="bg-gradient-chat hover:shadow-glow transition-smooth hover:scale-105 shrink-0"
-          disabled={(!value.trim() && !selectedImage) || uploading}
+          disabled={(!value.trim() && selectedImages.length === 0) || uploading}
         >
           <Send className="size-4 text-white" />
         </Button>
