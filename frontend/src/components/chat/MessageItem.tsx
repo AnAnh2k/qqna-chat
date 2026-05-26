@@ -37,6 +37,12 @@ const mentionAllLabel = "mọi người";
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+const trailingUrlPunctuationPattern = /[.,!?;:)]+$/;
+
+const normalizeUrl = (value: string) =>
+  value.startsWith("www.") ? `https://${value}` : value;
+
 const getStartOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -163,12 +169,18 @@ const MessageItem = ({
   const { viewProfile } = useUserStore();
   const { recallMessage, reactToMessage, setReplyingTo } = useChatStore();
   const { user } = useAuthStore();
+  const isLastMessage = message._id === selectedConvo.lastMessage?._id;
+  const canShowSeenReceipts = isLastMessage && message.senderId === user?._id;
   const readersWhoSeenThis = (selectedConvo.seenBy ?? []).filter(
     (s) => {
       const seenUserId =
         typeof s.userId === "string" ? s.userId : s.userId?._id;
 
-      return seenUserId !== user?._id && s.messageId === message._id;
+      return (
+        canShowSeenReceipts &&
+        seenUserId !== message.senderId &&
+        s.messageId === message._id
+      );
     },
   );
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
@@ -378,13 +390,66 @@ const MessageItem = ({
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
 
-  const renderMessageContent = (content: string) => {
-    if (mentionLabels.length === 0) {
-      return content;
+  const renderTextWithLinks = (text: string, keyPrefix: string) => {
+    const nodes: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    text.replace(urlPattern, (match, _url, offset) => {
+      if (offset > lastIndex) {
+        nodes.push(
+          <span key={`${keyPrefix}-text-${lastIndex}`}>
+            {text.slice(lastIndex, offset)}
+          </span>,
+        );
+      }
+
+      const trailing = match.match(trailingUrlPunctuationPattern)?.[0] ?? "";
+      const cleanUrl = trailing ? match.slice(0, -trailing.length) : match;
+
+      nodes.push(
+        <a
+          key={`${keyPrefix}-link-${offset}`}
+          href={normalizeUrl(cleanUrl)}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            "font-semibold underline underline-offset-2 break-all",
+            message.isOwn
+              ? "text-white"
+              : "text-primary hover:text-primary/80",
+          )}
+        >
+          {cleanUrl}
+        </a>,
+      );
+
+      if (trailing) {
+        nodes.push(
+          <span key={`${keyPrefix}-trail-${offset}`}>{trailing}</span>,
+        );
+      }
+
+      lastIndex = offset + match.length;
+      return match;
+    });
+
+    if (lastIndex < text.length) {
+      nodes.push(
+        <span key={`${keyPrefix}-text-${lastIndex}`}>
+          {text.slice(lastIndex)}
+        </span>,
+      );
     }
 
+    return nodes.length > 0 ? nodes : text;
+  };
+
+  const renderMessageContent = (content: string) => {
     const mentionPattern = new RegExp(
-      `(@(?:${mentionLabels.map(escapeRegExp).join("|")}))`,
+      mentionLabels.length > 0
+        ? `(@(?:${mentionLabels.map(escapeRegExp).join("|")}))`
+        : "($.^)",
       "gi",
     );
 
@@ -394,7 +459,11 @@ const MessageItem = ({
       );
 
       if (!isMention) {
-        return <span key={`${part}-${partIndex}`}>{part}</span>;
+        return (
+          <span key={`${part}-${partIndex}`}>
+            {renderTextWithLinks(part, `${partIndex}`)}
+          </span>
+        );
       }
 
       return (
@@ -654,13 +723,15 @@ const MessageItem = ({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align={message.isOwn ? "end" : "start"}
-                      className="flex items-center gap-1.5 p-1.5 bg-popover/95 backdrop-blur-md border border-border/40 shadow-xl rounded-full"
+                      side="top"
+                      sideOffset={2}
+                      className="flex w-max min-w-max max-w-none items-center gap-2 overflow-visible p-2 bg-popover/95 backdrop-blur-md border border-border/40 shadow-xl rounded-full"
                     >
-                      {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
+                      {["❤️", "😂", "😮", "😢", "😭", "😡"].map((emoji) => (
                         <DropdownMenuItem
                           key={emoji}
                           onClick={() => reactToMessage(message._id, emoji)}
-                          className="p-1.5 text-base hover:scale-125 focus:scale-125 transition-transform cursor-pointer rounded-full hover:bg-primary/10 focus:bg-primary/10 flex items-center justify-center size-8"
+                          className="p-0 text-xl leading-none hover:scale-125 focus:scale-125 transition-transform cursor-pointer rounded-full hover:bg-primary/10 focus:bg-primary/10 flex items-center justify-center size-9 shrink-0 overflow-visible"
                         >
                           {emoji}
                         </DropdownMenuItem>
@@ -751,7 +822,7 @@ const MessageItem = ({
 
             {/* seen/ delivered */}
             {message.isOwn &&
-              message._id === selectedConvo.lastMessage?._id &&
+              isLastMessage &&
               lastMessageStatus === "delivered" && (
               <Badge
                 variant="outline"
