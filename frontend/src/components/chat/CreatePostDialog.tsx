@@ -61,7 +61,7 @@ const CreatePostDialog = ({ open, setOpen, onSend }: CreatePostDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-5xl bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
+      <DialogContent className="sm:max-w-[50vw] bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
         <DialogHeader className="mb-4">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <FileText className="size-5 text-primary" />

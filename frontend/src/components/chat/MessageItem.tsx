@@ -356,7 +356,7 @@ const MessageItem = ({
         onConfirm={handleRecall}
       />
       <Dialog open={postReaderOpen} onOpenChange={setPostReaderOpen}>
-        <DialogContent className="max-w-5xl bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
+        <DialogContent className="sm:max-w-[50vw] bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
           <DialogHeader className="mb-2 shrink-0 border-b border-border/40 pb-4">
             <DialogTitle className="text-xl font-black text-slate-800 dark:text-slate-100 break-all leading-snug flex items-start gap-2.5">
               <FileText className="size-6 text-primary shrink-0 mt-0.5" />
