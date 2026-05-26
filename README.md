@@ -4,14 +4,6 @@
 
 ---
 
-## 👥 Tài Khoản Thử Nghiệm (Test Account)
-
-Để thuận tiện cho việc đánh giá và kiểm thử giao diện cũng như các tính năng trò chuyện thời gian thực:
-* **Username:** `user3`
-* **Mật khẩu (Password):** `123456`
-
----
-
 ## 🚀 Hướng Dẫn Chạy Dưới Localhost (Running Locally)
 
 Để khởi chạy dự án ở local, bạn cần chạy đồng thời cả máy chủ Backend và ứng dụng Frontend:
