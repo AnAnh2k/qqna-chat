@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil, ListTree } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
 import { useState, useEffect, useMemo } from "react";
@@ -36,6 +36,12 @@ interface MessageItemProps {
 
 const mentionAllLabel = "mọi người";
 
+type PostHeadingBookmark = {
+  id: string;
+  text: string;
+  level: number;
+};
+
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -44,6 +50,45 @@ const trailingUrlPunctuationPattern = /[.,!?;:)]+$/;
 
 const normalizeUrl = (value: string) =>
   value.startsWith("www.") ? `https://${value}` : value;
+
+const getPostHtmlWithBookmarks = (
+  html: string,
+  messageId: string,
+): { html: string; headings: PostHeadingBookmark[] } => {
+  const formattedHtml = formatRichPostHtml(html);
+
+  if (typeof DOMParser === "undefined") {
+    return { html: formattedHtml, headings: [] };
+  }
+
+  const parsed = new DOMParser().parseFromString(
+    `<div>${formattedHtml}</div>`,
+    "text/html",
+  );
+  const root = parsed.body.firstElementChild as HTMLElement | null;
+
+  if (!root) {
+    return { html: formattedHtml, headings: [] };
+  }
+
+  const headings = Array.from(root.querySelectorAll("h1, h2, h3, h4"))
+    .map((heading, index) => {
+      const text = heading.textContent?.trim() ?? "";
+      if (!text) return null;
+
+      const id = `post-${messageId}-heading-${index}`;
+      heading.id = id;
+
+      return {
+        id,
+        text,
+        level: Number(heading.tagName.slice(1)),
+      };
+    })
+    .filter((heading): heading is PostHeadingBookmark => Boolean(heading));
+
+  return { html: root.innerHTML, headings };
+};
 
 const getStartOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -250,8 +295,22 @@ const MessageItem = ({
         : [],
     [message.content, message.imgUrls, message.messageType],
   );
+  const postReaderContent = useMemo(
+    () =>
+      message.messageType === "post"
+        ? getPostHtmlWithBookmarks(message.content ?? "", message._id)
+        : { html: "", headings: [] },
+    [message._id, message.content, message.messageType],
+  );
   const lightboxImages =
     message.messageType === "post" ? postImageUrls : allImages;
+
+  const scrollToPostHeading = (headingId: string) => {
+    document.getElementById(headingId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   const openLightboxBySrc = (src: string) => {
     const idx = lightboxImages.findIndex(
@@ -966,13 +1025,13 @@ const MessageItem = ({
         onConfirm={handleRecall}
       />
       <Dialog open={postReaderOpen} onOpenChange={setPostReaderOpen}>
-        <DialogContent className="sm:max-w-[50vw] bg-gradient-glass border-border/40 p-6 flex flex-col max-h-[85vh]">
+        <DialogContent className="w-[min(94vw,1100px)] sm:max-w-[60vw] bg-gradient-glass border-border/40 p-6 flex flex-col h-[95vh] max-h-[95vh]">
           <DialogHeader className="mb-2 shrink-0 border-b border-border/40 pb-4">
             <DialogTitle className="text-xl font-black text-slate-800 dark:text-slate-100 break-all leading-snug flex items-start gap-2.5">
               <FileText className="size-6 text-primary shrink-0 mt-0.5" />
               <span>{message.title}</span>
             </DialogTitle>
-            <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <UserAvatar
                 type="chat"
                 name={participant?.displayName ?? (message.isOwn ? "Bạn" : "QQNA")}
@@ -990,12 +1049,45 @@ const MessageItem = ({
                 month: "2-digit",
                 year: "numeric"
               })}</span>
+              {postReaderContent.headings.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto h-7 w-fit gap-1.5 rounded-lg px-2.5 text-xs font-semibold"
+                      />
+                    }
+                  >
+                    <ListTree className="size-3.5" />
+                    Mục lục
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-72 w-72 overflow-y-auto">
+                    {postReaderContent.headings.map((heading) => (
+                      <DropdownMenuItem
+                        key={heading.id}
+                        className={cn(
+                          "cursor-pointer text-sm leading-snug",
+                          heading.level === 2 && "pl-5",
+                          heading.level === 3 && "pl-8",
+                          heading.level === 4 && "pl-11",
+                        )}
+                        onClick={() => scrollToPostHeading(heading.id)}
+                      >
+                        <span className="truncate">{heading.text}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto py-2 pr-1 beautiful-scrollbar min-h-0">
             <div
-              className="post-content text-slate-700 dark:text-slate-300 text-sm leading-relaxed break-words [&_h1]:mb-4 [&_h1]:text-3xl [&_h1]:font-black [&_h1]:tracking-tight [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-2.5 [&_h3]:text-xl [&_h3]:font-bold [&_h4]:mb-2 [&_h4]:text-lg [&_h4]:font-semibold [&_p]:mb-3 [&_a]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:max-w-full [&_img]:rounded-2xl [&_img]:shadow-md [&_img]:cursor-zoom-in"
+              className="post-content text-slate-700 dark:text-slate-300 text-sm leading-relaxed break-words [&_h1]:mb-4 [&_h1]:scroll-mt-4 [&_h1]:text-3xl [&_h1]:font-black [&_h1]:tracking-tight [&_h2]:mb-3 [&_h2]:scroll-mt-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:mb-2.5 [&_h3]:scroll-mt-4 [&_h3]:text-xl [&_h3]:font-bold [&_h4]:mb-2 [&_h4]:scroll-mt-4 [&_h4]:text-lg [&_h4]:font-semibold [&_p]:mb-3 [&_a]:font-semibold [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_img]:my-4 [&_img]:mx-auto [&_img]:block [&_img]:max-h-[72vh] [&_img]:max-w-full [&_img]:object-contain [&_img]:rounded-2xl [&_img]:shadow-md [&_img]:cursor-zoom-in"
               onClick={(event) => {
                 const target = event.target as HTMLElement | null;
                 if (target?.tagName === "IMG") {
@@ -1003,7 +1095,7 @@ const MessageItem = ({
                 }
               }}
               dangerouslySetInnerHTML={{
-                __html: formatRichPostHtml(message.content ?? ""),
+                __html: postReaderContent.html,
               }}
             />
           </div>

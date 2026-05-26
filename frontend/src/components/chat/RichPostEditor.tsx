@@ -9,6 +9,8 @@ import {
 import { Button } from "../ui/button";
 import {
   Bold,
+  AlignCenter,
+  AlignLeft,
   Heading1,
   Heading2,
   Heading3,
@@ -369,6 +371,36 @@ const RichPostEditor = forwardRef<RichPostEditorHandle, RichPostEditorProps>(
         >
           <Underline className="size-4" />
         </Button>
+
+        <span className="mx-1 h-6 w-px bg-border/60" />
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 rounded-lg"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => applyCommand("justifyLeft")}
+          disabled={disabled}
+          title="Căn trái"
+        >
+          <AlignLeft className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 rounded-lg"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => applyCommand("justifyCenter")}
+          disabled={disabled}
+          title="Căn giữa"
+        >
+          <AlignCenter className="size-4" />
+        </Button>
+
+        <span className="mx-1 h-6 w-px bg-border/60" />
+
         <Button
           type="button"
           variant="ghost"
@@ -381,8 +413,6 @@ const RichPostEditor = forwardRef<RichPostEditorHandle, RichPostEditorProps>(
         >
           <Link2 className="size-4" />
         </Button>
-
-        <span className="mx-1 h-6 w-px bg-border/60" />
 
         <Button
           type="button"

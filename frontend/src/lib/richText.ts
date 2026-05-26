@@ -31,6 +31,8 @@ const ALLOWED_STYLE_PROPS = new Set([
   "text-decoration",
 ]);
 
+const ALLOWED_TEXT_ALIGN_VALUES = new Set(["left", "center", "right", "justify"]);
+
 const normalizeUrl = (value: string) =>
   value.startsWith("www.") ? `https://${value}` : value;
 
@@ -104,9 +106,19 @@ const sanitizeElement = (node: Element, document: Document): Node | null => {
     element.setAttribute("draggable", "false");
   }
 
-  const style = sanitizeStyle(node.getAttribute("style"));
-  if (style) {
-    element.setAttribute("style", style);
+  const styleRules = [sanitizeStyle(node.getAttribute("style"))].filter(Boolean);
+  const align = node.getAttribute("align")?.trim().toLowerCase();
+
+  if (
+    align &&
+    ALLOWED_TEXT_ALIGN_VALUES.has(align) &&
+    !styleRules.some((rule) => /(?:^|;\s*)text-align\s*:/i.test(rule))
+  ) {
+    styleRules.push(`text-align: ${align}`);
+  }
+
+  if (styleRules.length > 0) {
+    element.setAttribute("style", styleRules.join("; "));
   }
 
   node.childNodes.forEach((child) => {
