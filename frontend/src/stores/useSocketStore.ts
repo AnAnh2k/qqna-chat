@@ -112,6 +112,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       useChatStore.getState().handleMessageRecalled(messageId, conversationId);
     });
 
+    // message reaction
+    socket.on("message-reaction", ({ messageId, conversationId, reactions }) => {
+      useChatStore.getState().handleMessageReaction(messageId, conversationId, reactions);
+    });
+
     // new friend request
     socket.on("new-friend-request", (request) => {
       useFriendStore.setState((state) => ({

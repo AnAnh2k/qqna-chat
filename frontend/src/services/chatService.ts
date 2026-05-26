@@ -30,6 +30,7 @@ export const chatService = {
     title?: string,
     messageType?: string,
     imgUrls?: string[],
+    replyTo?: string,
   ) {
     const res = await api.post("/messages/direct", {
       recipientId,
@@ -39,6 +40,7 @@ export const chatService = {
       title,
       messageType,
       imgUrls,
+      replyTo,
     });
 
     return res.data.message;
@@ -52,6 +54,7 @@ export const chatService = {
     title?: string,
     messageType?: string,
     imgUrls?: string[],
+    replyTo?: string,
   ) {
     const res = await api.post("/messages/group", {
       conversationId,
@@ -61,8 +64,13 @@ export const chatService = {
       title,
       messageType,
       imgUrls,
+      replyTo,
     });
     return res.data.message;
+  },
+  async reactToMessage(messageId: string, emoji: string) {
+    const res = await api.post(`/messages/${messageId}/react`, { emoji });
+    return res.data;
   },
 
   async markAsSeen(conversationId: string) {

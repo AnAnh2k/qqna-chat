@@ -29,6 +29,7 @@ export const useChatStore = create<ChatState>()(
       convoLoading: false, // convo loading
       messageLoading: false,
       loading: false,
+      replyingTo: null,
 
       setActiveConversation: (id) => set({ activeConversationId: id }),
       reset: () => {
@@ -38,6 +39,7 @@ export const useChatStore = create<ChatState>()(
           activeConversationId: null,
           convoLoading: false,
           messageLoading: false,
+          replyingTo: null,
         });
       },
       fetchConversations: async () => {
@@ -103,7 +105,7 @@ export const useChatStore = create<ChatState>()(
           set({ messageLoading: false });
         }
       },
-      sendDirectMessage: async (recipientId, content, imgUrl, title, messageType, imgUrls) => {
+      sendDirectMessage: async (recipientId, content, imgUrl, title, messageType, imgUrls, replyTo) => {
         try {
           const { activeConversationId } = get();
           await chatService.sendDirectMessage(
@@ -114,11 +116,13 @@ export const useChatStore = create<ChatState>()(
             title,
             messageType,
             imgUrls,
+            replyTo,
           );
           set((state) => ({
             conversations: state.conversations.map((c) =>
               c._id === activeConversationId ? { ...c, seenBy: [] } : c,
             ),
+            replyingTo: null,
           }));
         } catch (error) {
           console.error("Lỗi xảy ra khi gửi direct message", error);
@@ -132,6 +136,7 @@ export const useChatStore = create<ChatState>()(
         title,
         messageType,
         imgUrls,
+        replyTo,
       ) => {
         try {
           await chatService.sendGroupMessage(
@@ -142,11 +147,13 @@ export const useChatStore = create<ChatState>()(
             title,
             messageType,
             imgUrls,
+            replyTo,
           );
           set((state) => ({
             conversations: state.conversations.map((c) =>
               c._id === get().activeConversationId ? { ...c, seenBy: [] } : c,
             ),
+            replyingTo: null,
           }));
         } catch (error) {
           console.error("Lỗi xảy ra gửi group message", error);
@@ -421,6 +428,37 @@ export const useChatStore = create<ChatState>()(
               },
             },
             conversations,
+          };
+        });
+      },
+      setReplyingTo: (message) => {
+        set({ replyingTo: message });
+      },
+      reactToMessage: async (messageId, emoji) => {
+        try {
+          await chatService.reactToMessage(messageId, emoji);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi reactToMessage trong store", error);
+          throw error;
+        }
+      },
+      handleMessageReaction: (messageId, conversationId, reactions) => {
+        set((state) => {
+          const convoMessages = state.messages[conversationId];
+          if (!convoMessages) return {};
+
+          const updatedItems = convoMessages.items.map((m) =>
+            m._id === messageId ? { ...m, reactions } : m
+          );
+
+          return {
+            messages: {
+              ...state.messages,
+              [conversationId]: {
+                ...convoMessages,
+                items: updatedItems,
+              },
+            },
           };
         });
       },

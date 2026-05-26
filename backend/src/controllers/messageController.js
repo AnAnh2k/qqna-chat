@@ -9,7 +9,7 @@ import { uploadImageFromBuffer } from "../middlewares/uploadMiddleware.js";
 
 export const sendDirectMessage = async (req, res) => {
   try {
-    const { recipientId, content, conversationId, imgUrl, imgUrls, title, messageType } = req.body;
+    const { recipientId, content, conversationId, imgUrl, imgUrls, title, messageType, replyTo } = req.body;
     const senderId = req.user._id;
 
     let conversation;
@@ -42,15 +42,18 @@ export const sendDirectMessage = async (req, res) => {
       imgUrls: imgUrls || [],
       title: title || undefined,
       messageType: messageType || "user",
+      replyTo: replyTo || undefined,
     });
 
-    updateConversationAfterCreateMessage(conversation, message, senderId);
+    const populatedMessage = await message.populate("replyTo");
+
+    updateConversationAfterCreateMessage(conversation, populatedMessage, senderId);
 
     await conversation.save();
 
-    emitNewMessage(io, conversation, message);
+    emitNewMessage(io, conversation, populatedMessage);
 
-    return res.status(201).json({ message });
+    return res.status(201).json({ message: populatedMessage });
   } catch (error) {
     console.error("Lỗi xảy ra khi gửi tin nhắn trực tiếp", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
@@ -59,7 +62,7 @@ export const sendDirectMessage = async (req, res) => {
 
 export const sendGroupMessage = async (req, res) => {
   try {
-    const { conversationId, content, imgUrl, imgUrls, mentionedUserIds = [], title, messageType } = req.body;
+    const { conversationId, content, imgUrl, imgUrls, mentionedUserIds = [], title, messageType, replyTo } = req.body;
     const senderId = req.user._id;
     const conversation = req.conversation;
 
@@ -92,12 +95,15 @@ export const sendGroupMessage = async (req, res) => {
       mentions,
       title: title || undefined,
       messageType: messageType || "user",
+      replyTo: replyTo || undefined,
     });
 
-    updateConversationAfterCreateMessage(conversation, message, senderId);
+    const populatedMessage = await message.populate("replyTo");
+
+    updateConversationAfterCreateMessage(conversation, populatedMessage, senderId);
 
     await conversation.save();
-    emitNewMessage(io, conversation, message);
+    emitNewMessage(io, conversation, populatedMessage);
 
     const conversationName = conversation.group?.name || "nhóm";
     mentions.forEach((mentionedUserId) => {
@@ -106,11 +112,11 @@ export const sendGroupMessage = async (req, res) => {
         conversationName,
         senderId,
         senderName: req.user.displayName,
-        messageId: message._id,
+        messageId: populatedMessage._id,
       });
     });
 
-    return res.status(201).json({ message });
+    return res.status(201).json({ message: populatedMessage });
   } catch (error) {
     console.error("Lỗi xảy ra khi gửi tin nhắn nhóm", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
@@ -170,5 +176,56 @@ export const uploadMessageImage = async (req, res) => {
   } catch (error) {
     console.error("Lỗi xảy ra khi upload ảnh tin nhắn", error);
     return res.status(500).json({ message: "Upload failed" });
+  }
+};
+
+export const reactToMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id;
+
+    if (!emoji) {
+      return res.status(400).json({ message: "Thiếu biểu tượng cảm xúc" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Không tìm thấy tin nhắn" });
+    }
+
+    const existingReactionIdx = message.reactions.findIndex(
+      (r) => r.userId.toString() === userId.toString()
+    );
+
+    if (existingReactionIdx > -1) {
+      if (message.reactions[existingReactionIdx].emoji === emoji) {
+        // Nếu cùng emoji, xóa cảm xúc
+        message.reactions.splice(existingReactionIdx, 1);
+      } else {
+        // Nếu khác emoji, cập nhật emoji mới
+        message.reactions[existingReactionIdx].emoji = emoji;
+      }
+    } else {
+      // Nếu chưa có, thêm mới
+      message.reactions.push({ userId, emoji });
+    }
+
+    await message.save();
+
+    // Phát sự kiện socket
+    io.to(message.conversationId.toString()).emit("message-reaction", {
+      messageId: message._id,
+      conversationId: message.conversationId,
+      reactions: message.reactions,
+    });
+
+    return res.status(200).json({
+      messageId: message._id,
+      reactions: message.reactions,
+    });
+  } catch (error) {
+    console.error("Lỗi xảy ra khi thả cảm xúc tin nhắn:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

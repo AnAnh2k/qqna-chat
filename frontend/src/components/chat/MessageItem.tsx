@@ -5,6 +5,7 @@ import { Card } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { useUserStore } from "@/stores/useUserStore";
 import { useChatStore } from "@/stores/useChatStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
@@ -39,7 +40,8 @@ const MessageItem = ({
   lastMessageStatus,
 }: MessageItemProps) => {
   const { viewProfile } = useUserStore();
-  const recallMessage = useChatStore((s) => s.recallMessage);
+  const { recallMessage, reactToMessage, setReplyingTo } = useChatStore();
+  const { user } = useAuthStore();
   const prev = index + 1 < messages.length ? messages[index + 1] : undefined;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -354,7 +356,7 @@ const MessageItem = ({
         </div>
       )}
 
-      <div className={cn("flex flex-col w-full", isImageOnly && "mb-2")}>
+      <div id={`message-${message._id}`} className={cn("flex flex-col w-full transition-all duration-300 rounded-lg p-1", isImageOnly && "mb-2")}>
         {/* time */}
         {isShowTime && (
           <span className="flex justify-center text-xs text-muted-foreground px-1 py-2">
@@ -394,6 +396,42 @@ const MessageItem = ({
               message.isOwn ? "items-end" : "items-start",
             )}
           >
+            {/* Quoted parent message */}
+            {message.replyTo && (
+              <div
+                onClick={() => {
+                  const element = document.getElementById(`message-${message.replyTo?._id}`);
+                  if (element) {
+                    element.scrollIntoView({ behavior: "smooth", block: "center" });
+                    element.classList.add("bg-primary/10");
+                    setTimeout(() => {
+                      element.classList.remove("bg-primary/10");
+                    }, 1500);
+                  } else {
+                    toast.error("Không tìm thấy tin nhắn gốc hoặc tin nhắn quá cũ");
+                  }
+                }}
+                className={cn(
+                  "text-[10px] px-2.5 py-1.5 bg-muted/50 text-muted-foreground rounded-xl border-l-2 border-primary/50 max-w-[200px] truncate cursor-pointer hover:bg-muted/80 transition-all select-none mb-1 shadow-sm",
+                  message.isOwn ? "self-end" : "self-start"
+                )}
+                title="Cuộn tới tin nhắn gốc"
+              >
+                <span className="font-bold block text-[9px] text-primary/70 mb-0.5">
+                  {message.replyTo.senderId === user?._id ? "Bạn" : (selectedConvo.participants.find(p => p._id === message.replyTo?.senderId)?.displayName || "Người dùng")} đã trả lời:
+                </span>
+                <span className="block truncate">
+                  {message.replyTo.isRecalled
+                    ? "Tin nhắn đã bị thu hồi"
+                    : (message.replyTo.content ||
+                       (message.replyTo.imgUrl || (message.replyTo.imgUrls && message.replyTo.imgUrls.length > 0)
+                         ? "[Hình ảnh]"
+                         : "[Bài viết]"))
+                  }
+                </span>
+              </div>
+            )}
+
             <div
               className={cn(
                 "flex items-center gap-2 group/msg relative",
@@ -477,6 +515,45 @@ const MessageItem = ({
                     })}
                   </span>
 
+                  {/* Reaction Picker Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-smooth shrink-0 cursor-pointer"
+                        title="Thả cảm xúc"
+                      >
+                        <Smile className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align={message.isOwn ? "end" : "start"}
+                      className="flex items-center gap-1.5 p-1.5 bg-popover/95 backdrop-blur-md border border-border/40 shadow-xl rounded-full"
+                    >
+                      {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
+                        <DropdownMenuItem
+                          key={emoji}
+                          onClick={() => reactToMessage(message._id, emoji)}
+                          className="p-1.5 text-base hover:scale-125 focus:scale-125 transition-transform cursor-pointer rounded-full hover:bg-primary/10 focus:bg-primary/10 flex items-center justify-center size-8"
+                        >
+                          {emoji}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Reply Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 rounded-full hover:bg-primary/10 text-muted-foreground hover:text-primary transition-smooth shrink-0 cursor-pointer"
+                    onClick={() => setReplyingTo(message)}
+                    title="Trả lời tin nhắn"
+                  >
+                    <CornerUpLeft className="size-3.5" />
+                  </Button>
+
                   {message.isOwn && (
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -507,6 +584,45 @@ const MessageItem = ({
                 </div>
               )}
             </div>
+
+            {/* Reactions Badge */}
+            {message.reactions && message.reactions.length > 0 && (
+              <div
+                className={cn(
+                  "flex items-center gap-0.5 bg-background border border-border/40 hover:border-border/80 shadow-soft px-1.5 py-0.5 rounded-full select-none mt-1 text-[10px] w-fit cursor-pointer hover:scale-105 transition-transform duration-200",
+                  message.isOwn ? "self-end mr-2" : "self-start ml-2"
+                )}
+                onClick={() => {
+                  const myReaction = message.reactions?.find((r) => r.userId === user?._id);
+                  if (myReaction) {
+                    reactToMessage(message._id, myReaction.emoji);
+                  }
+                }}
+                title={Object.entries(
+                  message.reactions.reduce<Record<string, string[]>>((acc, curr) => {
+                    const member = selectedConvo.participants.find((p) => p._id === curr.userId);
+                    const name = curr.userId === user?._id ? "Bạn" : (member ? member.displayName : "Người dùng");
+                    if (!acc[curr.emoji]) acc[curr.emoji] = [];
+                    acc[curr.emoji].push(name);
+                    return acc;
+                  }, {})
+                )
+                  .map(([emoji, names]) => `${emoji} bởi: ${names.join(", ")}`)
+                  .join("\n")}
+              >
+                <span className="flex items-center tracking-tighter">
+                  {Object.keys(
+                    message.reactions.reduce<Record<string, boolean>>((acc, curr) => {
+                      acc[curr.emoji] = true;
+                      return acc;
+                    }, {})
+                  ).join("")}
+                </span>
+                <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">
+                  {message.reactions.length}
+                </span>
+              </div>
+            )}
 
             {/* seen/ delivered */}
             {message.isOwn && message._id === selectedConvo.lastMessage?._id && (

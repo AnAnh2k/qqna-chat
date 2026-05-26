@@ -5,6 +5,7 @@ import {
   sendGroupMessage,
   recallMessage,
   uploadMessageImage,
+  reactToMessage,
 } from "../controllers/messageController.js";
 import {
   checkFriendship,
@@ -24,5 +25,8 @@ router.post("/group", checkGroupMembership, sendGroupMessage);
 
 // Thu hồi tin nhắn
 router.delete("/:messageId", recallMessage);
+
+// Thả cảm xúc tin nhắn
+router.post("/:messageId/react", reactToMessage);
 
 export default router;

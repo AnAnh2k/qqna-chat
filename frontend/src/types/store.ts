@@ -44,6 +44,7 @@ export interface ChatState {
   convoLoading: boolean;
   messageLoading: boolean;
   loading: boolean;
+  replyingTo: Message | null;
   reset: () => void;
 
   setActiveConversation: (id: string | null) => void;
@@ -56,6 +57,7 @@ export interface ChatState {
     title?: string,
     messageType?: string,
     imgUrls?: string[],
+    replyTo?: string,
   ) => Promise<void>;
   sendGroupMessage: (
     conversationId: string,
@@ -65,6 +67,7 @@ export interface ChatState {
     title?: string,
     messageType?: string,
     imgUrls?: string[],
+    replyTo?: string,
   ) => Promise<void>;
   // add message
   addMessage: (message: Message) => Promise<void>;
@@ -86,6 +89,9 @@ export interface ChatState {
   uploadMessageImage: (file: File) => Promise<string>;
   recallMessage: (messageId: string) => Promise<void>;
   handleMessageRecalled: (messageId: string, conversationId: string) => void;
+  setReplyingTo: (message: Message | null) => void;
+  reactToMessage: (messageId: string, emoji: string) => Promise<void>;
+  handleMessageReaction: (messageId: string, conversationId: string, reactions: any[]) => void;
 }
 
 export interface SocketState {

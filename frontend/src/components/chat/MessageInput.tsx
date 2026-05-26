@@ -22,7 +22,7 @@ const escapeRegExp = (value: string) =>
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
-  const { sendDirectMessage, sendGroupMessage, uploadMessageImage } =
+  const { sendDirectMessage, sendGroupMessage, uploadMessageImage, replyingTo, setReplyingTo } =
     useChatStore();
   const { friends, getFriends } = useFriendStore();
   const [value, setValue] = useState("");
@@ -232,6 +232,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           undefined,
           undefined,
           albumImgUrls,
+          replyingTo?._id,
         );
       } else {
         await sendGroupMessage(
@@ -242,6 +243,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           undefined,
           undefined,
           albumImgUrls,
+          replyingTo?._id,
         );
       }
     } catch (error) {
@@ -280,8 +282,34 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     }
   };
 
+  const replySender = selectedConvo.participants.find(p => p._id === replyingTo?.senderId);
+  const replySenderName = replyingTo?.isOwn ? "chính bản thân" : (replySender ? replySender.displayName : "Người dùng");
+
   return (
     <div className="flex flex-col bg-background border-t border-border/40">
+      {/* Replying Preview Bar */}
+      {replyingTo && (
+        <div className="px-4 py-2 flex items-center justify-between bg-primary/5 border-b border-border/30 animate-in slide-in-from-bottom-2 duration-200">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-[11px] font-bold text-primary flex items-center gap-1 select-none">
+              <span className="inline-block border-l-2 border-primary h-2.5 mr-0.5" />
+              Đang trả lời {replySenderName}
+            </span>
+            <span className="text-xs text-muted-foreground truncate pr-4">
+              {replyingTo.content || (replyingTo.imgUrl || (replyingTo.imgUrls && replyingTo.imgUrls.length > 0) ? "[Hình ảnh]" : "[Tin nhắn]")}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyingTo(null)}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-full p-1 transition-smooth cursor-pointer shrink-0"
+            title="Hủy trả lời"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Image Previews list */}
       {imagePreviews.length > 0 && (
         <div className="px-3 pt-3 pb-1 flex flex-wrap gap-2 max-h-32 overflow-y-auto beautiful-scrollbar">

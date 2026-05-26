@@ -47,12 +47,17 @@ export interface ConversationResponse {
   conversations: Conversation[];
 }
 
+export interface Reaction {
+  userId: string;
+  emoji: string;
+}
+
 export interface Message {
   _id: string;
   conversationId: string;
   senderId: string;
   content: string | null;
-  messageType?: "user" | "system";
+  messageType?: "user" | "system" | "post";
   imgUrl?: string | null;
   imgUrls?: string[] | null;
   mentions?: string[];
@@ -60,4 +65,6 @@ export interface Message {
   updatedAt?: string | null;
   createdAt: string;
   isOwn?: boolean;
+  replyTo?: Message | null;
+  reactions?: Reaction[];
 }
