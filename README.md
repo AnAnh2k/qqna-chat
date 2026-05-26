@@ -43,33 +43,132 @@
 
 ## ✨ Các Tính Năng Đã Đạt Được (Features Implemented)
 
-Hệ thống đã hoàn thiện luồng trải nghiệm người dùng khép kín từ lúc bắt đầu truy cập ứng dụng cho đến các tính năng kết bạn và trò chuyện chuyên sâu:
+Hệ thống đã hoàn thiện luồng trải nghiệm người dùng từ truy cập ứng dụng, xác thực, kết bạn, trò chuyện thời gian thực cho đến quản lý hồ sơ, nhóm chat và thông báo.
 
 ### 1. Màn Hình Chờ Đánh Thức Máy Chủ (Server Warmup)
-* **Giải quyết Cold Start:** Tự động hiển thị màn hình chờ đẹp mắt với tông màu gradient tím-hồng khi người dùng truy cập.
-* **Cơ chế:** Frontend sẽ tự động gửi yêu cầu để kích hoạt/đánh thức backend chạy trên Render (gói miễn phí tự động ngủ sau 15 phút). Máy chủ thức dậy thành công sẽ tự động chuyển hướng người dùng vào trang đăng nhập mà không gây gián đoạn trải nghiệm.
+* **Giải quyết Cold Start:** Tự động hiển thị màn hình chờ khi người dùng truy cập trong lúc backend Render miễn phí đang ngủ.
+* **Cơ chế đánh thức:** Frontend gọi endpoint kiểm tra máy chủ, chờ backend sẵn sàng rồi mới đưa người dùng vào luồng đăng nhập/ứng dụng.
+* **Trải nghiệm liền mạch:** Giảm cảm giác lỗi kết nối khi backend cần thời gian khởi động lại.
 
-### 2. Đăng Ký & Đăng Nhập (Authentication)
-* Xác thực người dùng dựa trên JWT (JSON Web Token) được lưu trữ an toàn trong cookie (`HttpOnly`).
-* Bảo mật và mã hóa mật khẩu người dùng bằng thư viện `bcrypt`.
-* Tự động làm mới phiên đăng nhập (Refresh Token) khi Access Token hết hạn.
+### 2. Đăng Ký, Đăng Nhập & Phiên Làm Việc (Authentication)
+* Đăng ký tài khoản với `username`, `password`, `email`, `firstName`, `lastName`.
+* Đăng nhập bằng `username` và `password`.
+* Mật khẩu được mã hóa bằng `bcrypt` trước khi lưu vào cơ sở dữ liệu.
+* Xác thực bằng JWT gồm Access Token và Refresh Token.
+* Refresh Token được lưu bằng cookie `HttpOnly`, hỗ trợ tự động làm mới phiên khi Access Token hết hạn.
+* Axios interceptor tự động gọi `/auth/refresh` với các API cần xác thực.
+* Route bảo vệ frontend: chỉ người đã đăng nhập mới vào được trang chat, người đã đăng nhập không bị đưa lại trang đăng nhập.
+* Đăng xuất sẽ xóa state đăng nhập, chat store, `localStorage` và `sessionStorage`.
+* Hiển thị đúng thông báo lỗi do backend trả về khi đăng nhập/đăng ký thất bại, ví dụ sai tên đăng nhập hoặc mật khẩu.
 
-### 3. Trò Chuyện Thời Gian Thực (Real-time Chatting)
-* **Kết nối WebSockets:** Nhận và gửi tin nhắn tức thời không độ trễ thông qua Socket.io.
-* **Trạng thái hoạt động:** Hiển thị trực quan trạng thái **Online / Offline** (chấm xanh lá) của bạn bè trong danh sách.
-* **Đã xem (Mark as seen):** Tự động đồng bộ trạng thái đọc tin nhắn của các thành viên trong cuộc hội thoại.
-* **Emoji Picker:** Tích hợp bộ chọn emoji sinh động giúp cuộc trò chuyện trở nên phong phú hơn.
+### 3. Hồ Sơ Cá Nhân & Cài Đặt Tài Khoản (Profile & Account Settings)
+* Xem hồ sơ cá nhân và hồ sơ người dùng khác.
+* Cập nhật thông tin cá nhân: tên hiển thị, username, email, số điện thoại và tiểu sử.
+* Kiểm tra trùng username/email khi cập nhật thông tin.
+* Đổi mật khẩu với kiểm tra mật khẩu hiện tại, độ dài mật khẩu mới và xác nhận mật khẩu.
+* Bật/tắt hiển thị mật khẩu trong form đổi mật khẩu.
+* Tải avatar cá nhân lên Cloudinary qua `multer` buffer upload.
+* Xem ảnh đại diện ở dạng preview/phóng to.
+* Hủy kết bạn trực tiếp từ hồ sơ người dùng khác.
 
-### 4. Tạo Nhóm Trò Chuyện (Group Chat)
-* Hộp thoại tạo nhóm trực quan, cho phép đặt tên nhóm và hiển thị toàn bộ danh sách bạn bè khả dụng làm gợi ý.
-* Quản lý danh sách thành viên chuẩn bị mời (thêm vào/xóa khỏi danh sách tạm).
-* Tự động đẩy sự kiện socket đến tất cả các thành viên được mời để họ lập tức tham gia vào phòng chat nhóm mới mà không cần reload trang.
+### 4. Giao Diện & Trải Nghiệm Ứng Dụng (UI/UX)
+* Giao diện sidebar cho danh sách trò chuyện, nhóm, bạn bè và menu tài khoản.
+* Hỗ trợ Light Mode/Dark Mode, lưu lựa chọn theme bằng Zustand persist.
+* Giao diện responsive, có sidebar mobile.
+* Skeleton/loading state cho các vùng nội dung cần tải dữ liệu.
+* Dialog xác nhận cho các thao tác quan trọng như đăng xuất, xóa trò chuyện, thu hồi tin nhắn, rời nhóm hoặc giải tán nhóm.
+* Toast thông báo trạng thái thao tác bằng Sonner.
 
 ### 5. Quản Lý Bạn Bè (Friend Management)
-* Tìm kiếm người dùng trong hệ thống thông qua `username`.
+* Tìm kiếm người dùng bằng `username`.
 * Gửi lời mời kết bạn kèm lời nhắn tùy chọn.
-* Giao diện quản lý lời mời kết bạn đã nhận/đã gửi, cho phép **Đồng ý** hoặc **Từ chối** lời mời ngay tức thì.
+* Không cho gửi lời mời đến chính mình, người đã là bạn bè hoặc lời mời đã tồn tại.
+* Quản lý danh sách lời mời đã nhận và đã gửi.
+* Đồng ý hoặc từ chối lời mời kết bạn.
+* Lấy danh sách bạn bè hiện tại.
+* Hủy kết bạn.
+* Đồng bộ thời gian thực các sự kiện bạn bè qua Socket.io: lời mời mới, lời mời được chấp nhận, lời mời bị từ chối và hủy kết bạn.
 
-### 6. Cài Đặt Hồ Sơ & Tải Ảnh Đại Diện (Profile & Avatar Upload)
-* Bảng điều khiển (Profile & Settings) được thiết kế hiện đại, tinh gọn giúp quản lý thông tin tài khoản (Tên hiển thị, email, số điện thoại, tiểu sử).
-* **Tải lên Avatar (Cloudinary):** Tích hợp công nghệ tải ảnh trực tiếp từ bộ nhớ đệm Buffer lên dịch vụ đám mây Cloudinary, cập nhật đường dẫn ảnh đại diện mới vào cơ sở dữ liệu và đồng bộ hóa ngay lập tức lên giao diện trò chuyện.
+### 6. Trò Chuyện Trực Tiếp 1-1 (Direct Chat)
+* Tạo hoặc mở cuộc trò chuyện trực tiếp với bạn bè.
+* Chỉ cho phép nhắn tin trực tiếp với người đã kết bạn.
+* Gửi và nhận tin nhắn thời gian thực bằng Socket.io.
+* Sidebar tự cập nhật tin nhắn cuối, thời gian mới nhất và sắp xếp conversation theo hoạt động gần nhất.
+* Hiển thị số tin nhắn chưa đọc theo từng cuộc trò chuyện.
+* Tự động đánh dấu đã xem khi đang mở đúng cuộc trò chuyện.
+* Đồng bộ trạng thái đã xem giữa các client.
+* Xóa lịch sử cuộc trò chuyện ở phía người dùng hiện tại.
+
+### 7. Nhóm Trò Chuyện (Group Chat)
+* Tạo nhóm mới với tên nhóm và danh sách thành viên được chọn từ bạn bè.
+* Gửi socket event để thành viên được mời thấy nhóm mới ngay, không cần reload.
+* Thêm thành viên mới vào nhóm.
+* Rời nhóm.
+* Giải tán nhóm.
+* Đổi tên nhóm.
+* Cập nhật avatar nhóm bằng upload ảnh lên Cloudinary.
+* Xem danh sách thành viên nhóm và mở hồ sơ thành viên.
+* Đồng bộ realtime các thay đổi nhóm qua socket: nhóm mới, cập nhật nhóm, thành viên bị remove/nhóm bị giải tán.
+
+### 8. Tin Nhắn, Ảnh, Reply & Mention (Messaging)
+* Gửi tin nhắn văn bản trong chat 1-1 và chat nhóm.
+* Gửi một ảnh hoặc nhiều ảnh trong cùng một tin nhắn.
+* Upload ảnh tin nhắn lên Cloudinary.
+* Preview ảnh trước khi gửi.
+* Dán ảnh trực tiếp từ clipboard vào ô nhập tin nhắn.
+* Xem ảnh trong lightbox/phóng to.
+* Trả lời tin nhắn, hiển thị block quote của tin nhắn gốc.
+* Click vào tin nhắn được reply để cuộn về tin nhắn gốc nếu còn trong danh sách.
+* Mention thành viên trong nhóm bằng `@tên`, hỗ trợ `@mọi người`.
+* Gửi thông báo mention realtime cho người được nhắc.
+* Hiển thị mention nổi bật trong nội dung tin nhắn.
+* Emoji Picker hỗ trợ chèn emoji vào nội dung tin nhắn.
+
+### 9. Bài Viết Trong Chat (Rich Post)
+* Tạo bài viết dạng rich text trong cuộc trò chuyện.
+* Hỗ trợ tiêu đề bài viết riêng.
+* Editor hỗ trợ định dạng heading, bold, italic, underline và link.
+* Hỗ trợ chèn/dán ảnh trong nội dung bài viết và upload ảnh lên Cloudinary.
+* Hiển thị bài viết dạng card trong chat.
+* Mở bài viết ở chế độ đọc chi tiết.
+* Sửa bài viết đã gửi nếu người dùng là tác giả.
+* Đồng bộ cập nhật bài viết realtime đến các thành viên trong conversation.
+
+### 10. Tương Tác Tin Nhắn (Message Actions)
+* Thu hồi tin nhắn của chính mình.
+* Đồng bộ trạng thái thu hồi realtime bằng socket event `message-recalled`.
+* Thả cảm xúc nhanh vào tin nhắn với các emoji phổ biến.
+* Toggle reaction của chính mình.
+* Hiển thị tổng số reaction và tooltip danh sách người đã react.
+* Đồng bộ reaction realtime bằng socket event `message-reaction`.
+* Hiển thị trạng thái gửi/đã xem cho tin nhắn cuối của người gửi.
+
+### 11. Thông Báo, Unread Title & Âm Thanh (Notifications & Sound Effects)
+* **Unread Badge trên tiêu đề trình duyệt:** Tự động hiển thị tổng số tin nhắn chưa đọc trên tab, ví dụ `(2) QQNA Chat`.
+* Title tự quay về `QQNA Chat` khi không còn tin chưa đọc.
+* **Âm báo tin nhắn:** Phát âm thanh khi nhận tin nhắn mới từ người khác.
+* Hỗ trợ nhiều kiểu âm báo: QQNA Classic, Pop, Chime, Ping và Soft.
+* **Âm thanh thao tác:** Có feedback âm thanh cho các hành động chính như chọn cuộc trò chuyện, gửi tin nhắn, react emoji, thu hồi tin nhắn, tạo nhóm, xóa trò chuyện, rời/giải tán nhóm, đổi tên nhóm, cập nhật avatar nhóm và thao tác bạn bè.
+* Người dùng có thể bật/tắt âm báo tin nhắn, âm thao tác, pop-up trong app, thông báo trình duyệt và chỉnh âm lượng trong `Profile & Settings > Cấu Hình`.
+* **Thông báo trình duyệt thông minh:** Chỉ hiện browser notification khi không có tab/cửa sổ QQNA nào đang visible, tránh thông báo trùng khi người dùng đang mở app ở cửa sổ Chrome khác.
+* Pop-up trong app hiển thị người gửi và preview nội dung tin nhắn mới.
+
+### 12. Socket Realtime & Trạng Thái Online
+* Xác thực socket bằng Access Token.
+* Tự động join các phòng conversation mà người dùng là thành viên.
+* Join/leave conversation khi tạo nhóm hoặc bị remove khỏi nhóm.
+* Theo dõi online users và hiển thị trạng thái online/offline trong danh sách bạn bè.
+* Các socket event chính: `new-message`, `read-message`, `new-group`, `group-updated`, `group-removed`, `message-recalled`, `message-updated`, `message-reaction`, `mention-notification`, `new-friend-request`, `friend-request-accepted`, `friend-request-declined`, `unfriended`.
+
+### 13. Phân Trang & Lưu Trữ State
+* Tin nhắn được tải theo phân trang cursor với giới hạn 50 tin/lần.
+* Hỗ trợ infinite scroll để tải thêm tin nhắn cũ.
+* Persist một phần auth state, chat conversations, theme và notification settings bằng Zustand persist.
+* Reset state chat khi đăng xuất để tránh lộ dữ liệu phiên trước.
+
+### 14. Upload Ảnh & Cloudinary
+* Upload avatar cá nhân.
+* Upload avatar nhóm.
+* Upload ảnh tin nhắn.
+* Upload ảnh trong rich post.
+* Backend dùng `multer` memory storage và helper upload buffer lên Cloudinary.
