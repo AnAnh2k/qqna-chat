@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useChatStore } from "@/stores/useChatStore";
 
 const NewGroupChatModal = () => {
+  const [open, setOpen] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [search, setSearch] = useState("");
   const { friends, getFriends } = useFriendStore();
@@ -28,6 +29,22 @@ const NewGroupChatModal = () => {
   const handleGetFriends = useCallback(async () => {
     await getFriends();
   }, [getFriends]);
+
+  const resetForm = useCallback(() => {
+    setGroupName("");
+    setSearch("");
+    setInvitedUsers([]);
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) {
+        resetForm();
+      }
+    },
+    [resetForm],
+  );
 
   const handleSelectFriend = useCallback((friend: Friend) => {
     setInvitedUsers((prev) => [...prev, friend]);
@@ -52,15 +69,15 @@ const NewGroupChatModal = () => {
         invitedUsers.map((u) => u._id),
       );
 
-      setSearch("");
-      setInvitedUsers([]);
+      resetForm();
+      setOpen(false);
     } catch (error) {
       console.error(
         "Lỗi xảy ra khi handleSubmit trong NewGroupChatModal:",
         error,
       );
     }
-  }, [groupName, invitedUsers, createConversation]);
+  }, [groupName, invitedUsers, createConversation, resetForm]);
 
   const filteredFriends = useMemo(() => {
     const searchLower = search.toLowerCase();
@@ -72,7 +89,7 @@ const NewGroupChatModal = () => {
   }, [friends, search, invitedUsers]);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           <Button
