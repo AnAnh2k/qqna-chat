@@ -127,6 +127,13 @@ export const chatService = {
     const res = await api.delete(`/messages/${messageId}`);
     return res.data;
   },
+  async updatePostMessage(messageId: string, title: string, content: string) {
+    const res = await api.patch(`/messages/${messageId}/post`, {
+      title,
+      content,
+    });
+    return res.data.message;
+  },
   async uploadMessageImage(file: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);

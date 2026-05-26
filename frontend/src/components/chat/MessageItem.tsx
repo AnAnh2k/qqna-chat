@@ -18,11 +18,12 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import ConfirmDialog from "../common/ConfirmDialog";
+import CreatePostDialog from "./CreatePostDialog";
 
 interface MessageItemProps {
   message: Message;
@@ -167,7 +168,7 @@ const MessageItem = ({
   lastMessageStatus,
 }: MessageItemProps) => {
   const { viewProfile } = useUserStore();
-  const { recallMessage, reactToMessage, setReplyingTo } = useChatStore();
+  const { recallMessage, reactToMessage, setReplyingTo, updatePostMessage } = useChatStore();
   const { user } = useAuthStore();
   const isLastMessage = message._id === selectedConvo.lastMessage?._id;
   const canShowSeenReceipts = isLastMessage && message.senderId === user?._id;
@@ -189,6 +190,7 @@ const MessageItem = ({
   const [recallConfirmOpen, setRecallConfirmOpen] = useState(false);
   const [recalling, setRecalling] = useState(false);
   const [postReaderOpen, setPostReaderOpen] = useState(false);
+  const [postEditOpen, setPostEditOpen] = useState(false);
 
   const handleRecall = async () => {
     try {
@@ -200,6 +202,17 @@ const MessageItem = ({
       toast.error("Không thể thu hồi tin nhắn. Vui lòng thử lại!");
     } finally {
       setRecalling(false);
+    }
+  };
+
+  const handleUpdatePost = async (title: string, content: string) => {
+    try {
+      await updatePostMessage(message._id, title, content);
+      setPostReaderOpen(false);
+      toast.success("Đã cập nhật bài viết");
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   };
 
@@ -767,6 +780,15 @@ const MessageItem = ({
                         align={message.isOwn ? "end" : "start"}
                         className="w-28 min-w-[7rem]"
                       >
+                        {message.messageType === "post" && (
+                          <DropdownMenuItem
+                            onClick={() => setPostEditOpen(true)}
+                            className="cursor-pointer text-xs gap-1.5"
+                          >
+                            <Pencil className="size-3.5" />
+                            Sửa
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => setRecallConfirmOpen(true)}
                           className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-xs gap-1.5"
@@ -927,6 +949,17 @@ const MessageItem = ({
           </div>
 
           <DialogFooter className="mt-4 shrink-0 border-t border-border/40 pt-4 flex sm:justify-end">
+            {message.isOwn && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPostEditOpen(true)}
+                className="px-5 font-semibold text-xs rounded-lg"
+              >
+                <Pencil className="size-3.5 mr-1.5" />
+                Sửa
+              </Button>
+            )}
             <Button
               type="button"
               variant="outline"
@@ -938,6 +971,16 @@ const MessageItem = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {postEditOpen && (
+        <CreatePostDialog
+          open={postEditOpen}
+          setOpen={setPostEditOpen}
+          onSend={handleUpdatePost}
+          initialTitle={message.title ?? ""}
+          initialContent={message.content ?? ""}
+          mode="edit"
+        />
+      )}
     </>
   );
 };

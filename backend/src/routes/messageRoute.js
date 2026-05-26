@@ -6,6 +6,7 @@ import {
   recallMessage,
   uploadMessageImage,
   reactToMessage,
+  updatePostMessage,
 } from "../controllers/messageController.js";
 import {
   checkFriendship,
@@ -25,6 +26,9 @@ router.post("/group", checkGroupMembership, sendGroupMessage);
 
 // Thu hồi tin nhắn
 router.delete("/:messageId", recallMessage);
+
+// Sửa bài viết
+router.patch("/:messageId/post", updatePostMessage);
 
 // Thả cảm xúc tin nhắn
 router.post("/:messageId/react", reactToMessage);

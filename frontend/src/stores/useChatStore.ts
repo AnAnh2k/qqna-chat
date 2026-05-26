@@ -468,6 +468,63 @@ export const useChatStore = create<ChatState>()(
           };
         });
       },
+      updatePostMessage: async (messageId, title, content) => {
+        try {
+          await chatService.updatePostMessage(messageId, title, content);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi updatePostMessage trong store", error);
+          throw error;
+        }
+      },
+      handleMessageUpdated: (message, conversationId) => {
+        const { user } = useAuthStore.getState();
+
+        set((state) => {
+          const convoMessages = state.messages[conversationId];
+          const normalizedMessage = {
+            ...message,
+            isOwn: message.senderId === user?._id,
+          };
+
+          const nextConversations = state.conversations.map((convo) => {
+            if (
+              convo._id === conversationId &&
+              convo.lastMessage?._id === message._id
+            ) {
+              return {
+                ...convo,
+                lastMessage: {
+                  ...convo.lastMessage,
+                  content: message.content ?? "",
+                },
+              };
+            }
+
+            return convo;
+          });
+
+          if (!convoMessages) {
+            return {
+              conversations: sortConversationsByLatest(nextConversations),
+            };
+          }
+
+          return {
+            messages: {
+              ...state.messages,
+              [conversationId]: {
+                ...convoMessages,
+                items: convoMessages.items.map((item) =>
+                  item._id === message._id
+                    ? { ...item, ...normalizedMessage }
+                    : item,
+                ),
+              },
+            },
+            conversations: sortConversationsByLatest(nextConversations),
+          };
+        });
+      },
       setReplyingTo: (message) => {
         set({ replyingTo: message });
       },

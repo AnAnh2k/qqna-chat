@@ -92,6 +92,8 @@ export interface ChatState {
   uploadMessageImage: (file: File) => Promise<string>;
   recallMessage: (messageId: string) => Promise<void>;
   handleMessageRecalled: (messageId: string, conversationId: string) => void;
+  updatePostMessage: (messageId: string, title: string, content: string) => Promise<void>;
+  handleMessageUpdated: (message: Message, conversationId: string) => void;
   setReplyingTo: (message: Message | null) => void;
   reactToMessage: (messageId: string, emoji: string) => Promise<void>;
   handleMessageReaction: (messageId: string, conversationId: string, reactions: Reaction[]) => void;

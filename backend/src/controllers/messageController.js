@@ -159,6 +159,59 @@ export const recallMessage = async (req, res) => {
   }
 };
 
+export const updatePostMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { title, content } = req.body;
+    const userId = req.user._id;
+
+    const trimmedTitle = typeof title === "string" ? title.trim() : "";
+    const trimmedContent = typeof content === "string" ? content.trim() : "";
+
+    if (!trimmedTitle) {
+      return res.status(400).json({ message: "Tiêu đề bài viết không được để trống" });
+    }
+
+    if (!trimmedContent) {
+      return res.status(400).json({ message: "Nội dung bài viết không được để trống" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: "Không tìm thấy bài viết" });
+    }
+
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Bạn không có quyền sửa bài viết này" });
+    }
+
+    if (message.messageType !== "post" || message.isRecalled) {
+      return res.status(400).json({ message: "Chỉ có thể sửa bài viết đang hiển thị" });
+    }
+
+    message.title = trimmedTitle;
+    message.content = trimmedContent;
+    await message.save();
+
+    const conversation = await Conversation.findById(message.conversationId);
+    if (conversation?.lastMessage?._id?.toString() === message._id.toString()) {
+      conversation.lastMessage.content = trimmedContent;
+      conversation.lastMessageAt = message.createdAt;
+      await conversation.save();
+    }
+
+    io.to(message.conversationId.toString()).emit("message-updated", {
+      message,
+      conversationId: message.conversationId,
+    });
+
+    return res.status(200).json({ message });
+  } catch (error) {
+    console.error("Lỗi xảy ra khi sửa bài viết:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
 export const uploadMessageImage = async (req, res) => {
   try {
     const file = req.file;

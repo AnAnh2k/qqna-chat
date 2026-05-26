@@ -112,6 +112,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       useChatStore.getState().handleMessageRecalled(messageId, conversationId);
     });
 
+    // message updated
+    socket.on("message-updated", ({ message, conversationId }) => {
+      useChatStore.getState().handleMessageUpdated(message, conversationId);
+    });
+
     // message reaction
     socket.on("message-reaction", ({ messageId, conversationId, reactions }) => {
       useChatStore.getState().handleMessageReaction(messageId, conversationId, reactions);

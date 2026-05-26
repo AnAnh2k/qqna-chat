@@ -17,12 +17,23 @@ interface CreatePostDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   onSend: (title: string, content: string) => Promise<void>;
+  initialTitle?: string;
+  initialContent?: string;
+  mode?: "create" | "edit";
 }
 
-const CreatePostDialog = ({ open, setOpen, onSend }: CreatePostDialogProps) => {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+const CreatePostDialog = ({
+  open,
+  setOpen,
+  onSend,
+  initialTitle = "",
+  initialContent = "",
+  mode = "create",
+}: CreatePostDialogProps) => {
+  const [title, setTitle] = useState(initialTitle);
+  const [content, setContent] = useState(initialContent);
   const [submitting, setSubmitting] = useState(false);
+  const isEditMode = mode === "edit";
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -53,7 +64,7 @@ const CreatePostDialog = ({ open, setOpen, onSend }: CreatePostDialogProps) => {
       handleOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error("Không thể đăng bài viết.");
+      toast.error(isEditMode ? "Không thể cập nhật bài viết." : "Không thể đăng bài viết.");
     } finally {
       setSubmitting(false);
     }
@@ -65,7 +76,7 @@ const CreatePostDialog = ({ open, setOpen, onSend }: CreatePostDialogProps) => {
         <DialogHeader className="mb-4">
           <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
             <FileText className="size-5 text-primary" />
-            <span>Soạn Thảo Bài Viết / Câu Chuyện</span>
+            <span>{isEditMode ? "Sửa Bài Viết" : "Soạn Thảo Bài Viết / Câu Chuyện"}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -128,7 +139,7 @@ const CreatePostDialog = ({ open, setOpen, onSend }: CreatePostDialogProps) => {
               ) : (
                 <>
                   <Send className="size-4 mr-1.5 text-white" />
-                  Gửi bài viết
+                  {isEditMode ? "Lưu thay đổi" : "Gửi bài viết"}
                 </>
               )}
             </Button>
