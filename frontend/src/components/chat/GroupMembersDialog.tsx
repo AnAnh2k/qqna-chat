@@ -216,62 +216,63 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="w-[min(92vw,820px)] overflow-hidden flex flex-col p-6 max-h-[92vh] bg-gradient-glass">
-          <DialogHeader className="mb-4">
+        <DialogContent className="w-[min(92vw,820px)] overflow-y-auto overscroll-contain beautiful-scrollbar flex flex-col p-0 h-[95vh] max-h-[95vh] bg-gradient-glass">
+          <DialogHeader className="shrink-0 border-b border-border/40 px-6 py-5">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Users className="size-5 text-primary" />
               <span>Thành Viên Nhóm ({conversation.participants.length})</span>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="mb-4 flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-3.5 shadow-sm">
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() =>
-                  conversation.group?.avatarUrl && setAvatarPreviewOpen(true)
-                }
-                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                title={conversation.group?.avatarUrl ? "Xem avatar nhóm" : undefined}
-              >
-                <GroupChatAvatar
-                  participants={conversation.participants}
-                  type="sidebar"
-                  name={conversation.group?.name}
-                  avatarUrl={conversation.group?.avatarUrl}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                disabled={uploadingAvatar}
-                className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm ring-2 ring-background transition-smooth hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-70"
-                title="Đổi avatar nhóm"
-              >
-                <Camera className="size-3.5" />
-              </button>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 pt-4">
+            <div className="shrink-0 flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-3.5 shadow-sm">
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    conversation.group?.avatarUrl && setAvatarPreviewOpen(true)
+                  }
+                  className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  title={conversation.group?.avatarUrl ? "Xem avatar nhóm" : undefined}
+                >
+                  <GroupChatAvatar
+                    participants={conversation.participants}
+                    type="sidebar"
+                    name={conversation.group?.name}
+                    avatarUrl={conversation.group?.avatarUrl}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm ring-2 ring-background transition-smooth hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-70"
+                  title="Đổi avatar nhóm"
+                >
+                  <Camera className="size-3.5" />
+                </button>
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleGroupAvatarChange}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  Avatar nhóm
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {uploadingAvatar
+                    ? "Đang tải ảnh lên..."
+                    : "Bấm avatar để xem lớn, bấm camera để đổi ảnh."}
+                </p>
+              </div>
             </div>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleGroupAvatarChange}
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                Avatar nhóm
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {uploadingAvatar
-                  ? "Đang tải ảnh lên..."
-                  : "Bấm avatar để xem lớn, bấm camera để đổi ảnh."}
-              </p>
-            </div>
-          </div>
 
-          {/* Sửa tên nhóm */}
-          <div className="mb-4 p-3.5 rounded-xl border border-border/40 bg-muted/20 flex flex-col gap-1.5 shadow-sm">
+            {/* Sửa tên nhóm */}
+            <div className="shrink-0 p-3.5 rounded-xl border border-border/40 bg-muted/20 flex flex-col gap-1.5 shadow-sm">
             <Label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Tên nhóm</Label>
             {isEditingName ? (
               <div className="flex items-center gap-2 mt-1">
@@ -332,7 +333,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             )}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-2 beautiful-scrollbar pr-1 py-1">
+          <div className="min-h-[130px] flex-1 overflow-y-auto space-y-2 beautiful-scrollbar pr-1 py-1">
             {conversation.participants.map((member) => {
               const isAdmin = member._id === adminId;
 
@@ -377,7 +378,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             })}
           </div>
 
-          <div className="mt-4 space-y-4 border-t border-border/40 pt-4">
+          <div className="shrink-0 space-y-3 border-t border-border/40 pt-4">
             <Button
               variant="outline"
               className="w-full"
@@ -388,36 +389,38 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             </Button>
 
             {addMembersOpen && (
-              <div className="space-y-3 rounded-xl border border-border/40 bg-background/40 p-3">
-                <div className="space-y-2">
-                  <Label htmlFor="add-group-member">Chọn bạn bè</Label>
-                  <Input
-                    id="add-group-member"
-                    placeholder="Tìm theo tên hiển thị..."
-                    value={memberSearch}
-                    onChange={(event) => setMemberSearch(event.target.value)}
-                    className="glass-light border-border/30"
+              <div className="rounded-xl border border-border/40 bg-background/40 p-3">
+                <div className="max-h-[32vh] space-y-3 overflow-y-auto pr-1 beautiful-scrollbar">
+                  <div className="space-y-2">
+                    <Label htmlFor="add-group-member">Chọn bạn bè</Label>
+                    <Input
+                      id="add-group-member"
+                      placeholder="Tìm theo tên hiển thị..."
+                      value={memberSearch}
+                      onChange={(event) => setMemberSearch(event.target.value)}
+                      className="glass-light border-border/30"
+                    />
+                  </div>
+
+                  {filteredFriends.length > 0 ? (
+                    <IniviteSuggestionList
+                      filteredFriends={filteredFriends}
+                      onSelect={handleSelectFriend}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Không có bạn bè phù hợp để thêm vào nhóm.
+                    </p>
+                  )}
+
+                  <SelectedUsersList
+                    invitedUsers={selectedMembers}
+                    onRemove={handleRemoveSelectedFriend}
                   />
                 </div>
 
-                {filteredFriends.length > 0 ? (
-                  <IniviteSuggestionList
-                    filteredFriends={filteredFriends}
-                    onSelect={handleSelectFriend}
-                  />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Không có bạn bè phù hợp để thêm vào nhóm.
-                  </p>
-                )}
-
-                <SelectedUsersList
-                  invitedUsers={selectedMembers}
-                  onRemove={handleRemoveSelectedFriend}
-                />
-
                 <Button
-                  className="w-full"
+                  className="mt-3 w-full"
                   onClick={handleAddMembers}
                   disabled={addingMembers || selectedMembers.length === 0}
                 >
@@ -439,6 +442,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
               )}
               {isCurrentUserAdmin ? "Giải tán nhóm" : "Rời nhóm"}
             </Button>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
