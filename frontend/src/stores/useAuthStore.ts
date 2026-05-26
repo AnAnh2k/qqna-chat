@@ -1,9 +1,19 @@
 import { create } from "zustand";
 import { toast } from "sonner";
+import axios from "axios";
 import { authService } from "@/services/authService";
 import type { AuthState } from "@/types/store";
 import { persist } from "zustand/middleware";
 import { useChatStore } from "./useChatStore";
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || fallback;
+  }
+
+  return fallback;
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -41,7 +51,9 @@ export const useAuthStore = create<AuthState>()(
           toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
         } catch (error) {
           console.error("Lỗi khi đăng ký:", error);
-          toast.error("Đăng ký không thành công. Vui lòng thử lại.");
+          toast.error(
+            getErrorMessage(error, "Đăng ký không thành công. Vui lòng thử lại."),
+          );
           throw error;
         } finally {
           set({ loading: false });
@@ -64,7 +76,12 @@ export const useAuthStore = create<AuthState>()(
           toast.success("Chào mừng bạn quay lại vơi QQNA 🎉!");
         } catch (error) {
           console.error("Lỗi khi đăng nhập:", error);
-          toast.error("Đăng nhập không thành công. Vui lòng kiểm tra lại.");
+          toast.error(
+            getErrorMessage(
+              error,
+              "Đăng nhập không thành công. Vui lòng kiểm tra lại.",
+            ),
+          );
           throw error;
         } finally {
           set({ loading: false });
