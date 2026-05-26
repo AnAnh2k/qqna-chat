@@ -12,6 +12,14 @@ const formatUnreadCounts = (unreadCounts) => {
   return unreadCounts;
 };
 
+const getLastMessageContent = (message) => {
+  if (message.messageType === "post") {
+    return "đã gửi một bài viết";
+  }
+
+  return message.content;
+};
+
 export const updateConversationAfterCreateMessage = async (
   conversation,
   message,
@@ -38,8 +46,9 @@ export const updateConversationAfterCreateMessage = async (
       lastMessageAt: message.createdAt,
       lastMessage: {
         _id: message._id,
-        content: message.content,
+        content: getLastMessageContent(message),
         imgUrl: message.imgUrl || null,
+        messageType: message.messageType || "user",
         senderId,
         createdAt: message.createdAt,
       },

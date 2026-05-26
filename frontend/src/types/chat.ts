@@ -28,6 +28,7 @@ export interface LastMessage {
   content: string;
   imgUrl?: string | null;
   imgUrls?: string[] | null;
+  messageType?: "user" | "system" | "post";
   createdAt: string;
   sender:
     | string

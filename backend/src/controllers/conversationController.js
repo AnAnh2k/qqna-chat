@@ -291,6 +291,8 @@ export const markAsSeen = async (req, res) => {
       lastMessage: {
         _id: populated?.lastMessage._id,
         content: populated?.lastMessage.content,
+        imgUrl: populated?.lastMessage.imgUrl ?? null,
+        messageType: populated?.lastMessage.messageType,
         createdAt: populated?.lastMessage.createdAt,
         sender: {
           _id: populated?.lastMessage.senderId?._id ?? populated?.lastMessage.senderId,

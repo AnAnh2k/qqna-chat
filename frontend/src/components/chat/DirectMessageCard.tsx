@@ -36,7 +36,10 @@ const DirectMessageCard = ({ convo }: { convo: Conversation }) => {
 
   const unreadCount = convo.unreadCounts?.[user._id] ?? 0;
   const hasImage = !!convo.lastMessage?.imgUrl;
-  const lastContent = convo.lastMessage?.content ?? "";
+  const lastContent =
+    convo.lastMessage?.messageType === "post"
+      ? "đã gửi một bài viết"
+      : convo.lastMessage?.content ?? "";
   // Trường hợp ảnh gửi trước khi fix backend: lastMessage có nhưng content và imgUrl đều rỗng
   const isLikelyImageOnly =
     !!convo.lastMessage && !lastContent && !hasImage;

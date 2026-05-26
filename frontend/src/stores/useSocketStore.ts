@@ -11,7 +11,12 @@ import { hasVisibleQQNATab } from "@/lib/pagePresence";
 
 const baseURL = import.meta.env.VITE_SOCKET_URL;
 
-const getMessagePreview = (content?: string | null, imgUrl?: string | null) => {
+const getMessagePreview = (
+  content?: string | null,
+  imgUrl?: string | null,
+  messageType?: string | null,
+) => {
+  if (messageType === "post") return "đã gửi một bài viết";
   if (content?.trim()) return content;
   if (imgUrl) return "Đã gửi một hình ảnh";
   return "Bạn có tin nhắn mới";
@@ -58,6 +63,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         _id: conversation.lastMessage._id,
         content: conversation.lastMessage.content,
         imgUrl: conversation.lastMessage.imgUrl ?? null,
+        messageType: conversation.lastMessage.messageType ?? message.messageType,
         createdAt: conversation.lastMessage.createdAt,
         sender: {
           _id: message.senderId?.toString() ?? "",
@@ -86,7 +92,11 @@ export const useSocketStore = create<SocketState>((set, get) => ({
           soundVolume,
         } = useNotificationSettingsStore.getState();
         const senderName = senderParticipant?.displayName || "QQNA Chat";
-        const preview = getMessagePreview(message.content, message.imgUrl);
+        const preview = getMessagePreview(
+          message.content,
+          message.imgUrl,
+          message.messageType,
+        );
 
         if (messageSoundEnabled) {
           playMessageSound(soundVolume, messageSoundId).catch((error) => {

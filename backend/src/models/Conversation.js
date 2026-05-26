@@ -52,6 +52,11 @@ const lastMessageSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    messageType: {
+      type: String,
+      enum: ["user", "system", "post"],
+      default: "user",
+    },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

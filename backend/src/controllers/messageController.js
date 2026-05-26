@@ -200,8 +200,9 @@ export const updatePostMessage = async (req, res) => {
 
     const conversation = await Conversation.findById(message.conversationId);
     if (conversation?.lastMessage?._id?.toString() === message._id.toString()) {
-      conversation.lastMessage.content = trimmedContent;
+      conversation.lastMessage.content = "đã gửi một bài viết";
       conversation.lastMessage.imgUrl = message.imgUrl || null;
+      conversation.lastMessage.messageType = "post";
       conversation.lastMessageAt = message.createdAt;
       await conversation.save();
     }

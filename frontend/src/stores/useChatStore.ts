@@ -528,9 +528,13 @@ export const useChatStore = create<ChatState>()(
                 ...convo,
                 lastMessage: {
                   ...convo.lastMessage,
-                  content: message.content ?? "",
+                  content:
+                    message.messageType === "post"
+                      ? "đã gửi một bài viết"
+                      : message.content ?? "",
                   imgUrl: message.imgUrl ?? null,
                   imgUrls: message.imgUrls ?? null,
+                  messageType: message.messageType,
                 },
               };
             }
