@@ -128,6 +128,8 @@ const FriendListModal = () => {
                     <GroupChatAvatar
                       participants={group.participants}
                       type="sidebar"
+                      name={group.group?.name}
+                      avatarUrl={group.group?.avatarUrl}
                     />
                   </div>
 
