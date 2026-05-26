@@ -10,6 +10,7 @@ import { useFriendStore } from "@/stores/useFriendStore";
 import { toast } from "sonner";
 import UserAvatar from "./UserAvatar";
 import CreatePostDialog from "./CreatePostDialog";
+import AvatarPreviewDialog from "../common/AvatarPreviewDialog";
 
 type MentionSuggestion =
   | { type: "all"; _id: "all"; displayName: "mọi người" }
@@ -30,12 +31,19 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getFriends();
   }, [getFriends]);
+
+  useEffect(() => {
+    if (!replyingTo) return;
+
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [replyingTo]);
 
   const previewsRef = useRef<string[]>([]);
   useEffect(() => {
@@ -315,11 +323,18 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         <div className="px-3 pt-3 pb-1 flex flex-wrap gap-2 max-h-32 overflow-y-auto beautiful-scrollbar">
           {imagePreviews.map((url, idx) => (
             <div key={idx} className="relative inline-block shrink-0">
-              <img
-                src={url}
-                alt={`preview-${idx}`}
-                className="h-16 w-16 rounded-xl object-cover border border-border/50 shadow-sm"
-              />
+              <button
+                type="button"
+                onClick={() => setPreviewImageUrl(url)}
+                className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Xem ảnh trước khi gửi"
+              >
+                <img
+                  src={url}
+                  alt={`preview-${idx}`}
+                  className="h-16 w-16 rounded-xl object-cover border border-border/50 shadow-sm transition-opacity hover:opacity-90"
+                />
+              </button>
               <button
                 type="button"
                 onClick={() => removeImage(idx)}
@@ -447,6 +462,14 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         open={postDialogOpen}
         setOpen={setPostDialogOpen}
         onSend={handleSendPost}
+      />
+      <AvatarPreviewDialog
+        open={!!previewImageUrl}
+        onOpenChange={(open) => {
+          if (!open) setPreviewImageUrl(null);
+        }}
+        imageUrl={previewImageUrl}
+        name="ảnh xem trước"
       />
     </div>
   );
