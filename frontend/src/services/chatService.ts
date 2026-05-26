@@ -75,6 +75,10 @@ export const chatService = {
     const res = await api.delete(`/conversations/${conversationId}/disband`);
     return res.data;
   },
+  async renameGroup(conversationId: string, name: string) {
+    const res = await api.patch(`/conversations/${conversationId}/name`, { name });
+    return res.data.conversation;
+  },
   async createConversation(
     type: "direct" | "group",
     name: string,

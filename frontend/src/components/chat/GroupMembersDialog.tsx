@@ -4,7 +4,7 @@ import { Badge } from "../ui/badge";
 import { useUserStore } from "@/stores/useUserStore";
 import type { Conversation } from "@/types/chat";
 import { Card } from "../ui/card";
-import { Calendar, LogOut, Shield, Trash2, UserPlus, Users } from "lucide-react";
+import { Calendar, LogOut, Shield, Trash2, UserPlus, Users, Pencil, Check, X } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { Button } from "../ui/button";
@@ -41,7 +41,7 @@ interface GroupMembersDialogProps {
 const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogProps) => {
   const { viewProfile } = useUserStore();
   const currentUser = useAuthStore((state) => state.user);
-  const { leaveGroup, disbandGroup, addGroupMembers } = useChatStore();
+  const { leaveGroup, disbandGroup, addGroupMembers, renameGroup } = useChatStore();
   const { friends, getFriends } = useFriendStore();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
@@ -49,6 +49,9 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
   const [selectedMembers, setSelectedMembers] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingMembers, setAddingMembers] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newGroupName, setNewGroupName] = useState(conversation.group?.name || "");
+  const [renaming, setRenaming] = useState(false);
   const adminId = conversation.group?.createdBy;
   const isCurrentUserAdmin = currentUser?._id === adminId;
 
@@ -58,11 +61,19 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
     }
   }, [getFriends, open]);
 
+  useEffect(() => {
+    if (conversation.group?.name) {
+      setNewGroupName(conversation.group.name);
+    }
+  }, [conversation.group?.name]);
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setAddMembersOpen(false);
       setMemberSearch("");
       setSelectedMembers([]);
+      setIsEditingName(false);
+      setNewGroupName(conversation.group?.name || "");
     }
     setOpen(nextOpen);
   };
@@ -148,6 +159,29 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
     }
   };
 
+  const handleRenameGroup = async () => {
+    const trimmed = newGroupName.trim();
+    if (!trimmed) {
+      toast.warning("Tên nhóm không được để trống.");
+      return;
+    }
+    if (trimmed === conversation.group?.name) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      setRenaming(true);
+      await renameGroup(conversation._id, trimmed);
+      setIsEditingName(false);
+      toast.success("Đã đổi tên nhóm thành công.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Không thể đổi tên nhóm."));
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -158,6 +192,65 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
               <span>Thành Viên Nhóm ({conversation.participants.length})</span>
             </DialogTitle>
           </DialogHeader>
+
+          {/* Sửa tên nhóm */}
+          <div className="mb-4 p-3.5 rounded-xl border border-border/40 bg-muted/20 flex flex-col gap-1.5 shadow-sm">
+            <Label className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Tên nhóm</Label>
+            {isEditingName ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  value={newGroupName}
+                  onChange={(event) => setNewGroupName(event.target.value)}
+                  className="h-9 glass-light border-border/30 text-sm"
+                  placeholder="Nhập tên nhóm mới..."
+                  maxLength={50}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRenameGroup();
+                    if (e.key === "Escape") {
+                      setIsEditingName(false);
+                      setNewGroupName(conversation.group?.name || "");
+                    }
+                  }}
+                />
+                <Button 
+                  size="sm" 
+                  className="h-9 px-3"
+                  onClick={handleRenameGroup} 
+                  disabled={renaming || !newGroupName.trim() || newGroupName.trim() === conversation.group?.name}
+                >
+                  {renaming ? "Lưu..." : <Check className="size-4" />}
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-9 px-3 text-muted-foreground"
+                  onClick={() => { 
+                    setIsEditingName(false); 
+                    setNewGroupName(conversation.group?.name || ""); 
+                  }}
+                  disabled={renaming}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 mt-0.5">
+                <span className="font-bold text-base text-foreground break-all leading-snug">
+                  {conversation.group?.name}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 rounded-lg hover:bg-muted shrink-0"
+                  onClick={() => setIsEditingName(true)}
+                  title="Đổi tên nhóm"
+                >
+                  <Pencil className="size-4 text-muted-foreground hover:text-primary transition-colors" />
+                </Button>
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 overflow-y-auto space-y-2 beautiful-scrollbar pr-1 py-1">
             {conversation.participants.map((member) => {

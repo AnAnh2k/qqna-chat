@@ -510,3 +510,57 @@ export const disbandGroup = async (req, res) => {
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
+
+export const updateGroupName = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { name } = req.body;
+    const userId = req.user._id;
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ message: "Tên nhóm không được để trống" });
+    }
+
+    const trimmedName = name.trim();
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      type: "group",
+      "participants.userId": userId,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        message: "Nhóm không tồn tại hoặc bạn không phải thành viên",
+      });
+    }
+
+    conversation.group.name = trimmedName;
+
+    const systemMessage = await Message.create({
+      conversationId,
+      senderId: userId,
+      content: `${req.user.displayName} đã đổi tên nhóm thành "${trimmedName}"`,
+      messageType: "system",
+    });
+
+    updateConversationAfterCreateMessage(conversation, systemMessage, userId);
+    await conversation.save();
+
+    await conversation.populate([
+      { path: "participants.userId", select: "displayName avatarUrl" },
+      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
+      { path: "seenBy", select: "displayName avatarUrl" },
+    ]);
+
+    const formatted = formatConversation(conversation);
+
+    io.to(conversationId).emit("group-updated", formatted);
+    emitNewMessage(io, conversation, systemMessage);
+
+    return res.status(200).json({ conversation: formatted });
+  } catch (error) {
+    console.error("Lỗi khi đổi tên nhóm:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};

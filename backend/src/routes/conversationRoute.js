@@ -9,6 +9,7 @@ import {
   leaveGroup,
   disbandGroup,
   addGroupMembers,
+  updateGroupName,
 } from "../controllers/conversationController.js";
 import { checkFriendship } from "../middlewares/friendMiddleware.js";
 
@@ -20,6 +21,7 @@ router.get("/:conversationId/messages", getMessages);
 router.patch("/:conversationId/seen", markAsSeen);
 router.patch("/:conversationId/members", addGroupMembers);
 router.patch("/:conversationId/leave", leaveGroup);
+router.patch("/:conversationId/name", updateGroupName);
 router.delete("/:conversationId/clear", clearConversation);
 router.delete("/:conversationId/disband", disbandGroup);
 

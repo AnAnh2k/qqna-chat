@@ -353,6 +353,15 @@ export const useChatStore = create<ChatState>()(
           throw error;
         }
       },
+      renameGroup: async (conversationId, name) => {
+        try {
+          const conversation = await chatService.renameGroup(conversationId, name);
+          get().updateConversation(conversation);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi đổi tên nhóm trong store", error);
+          throw error;
+        }
+      },
       uploadMessageImage: async (file) => {
         return await chatService.uploadMessageImage(file);
       },
