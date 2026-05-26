@@ -9,12 +9,17 @@ export const upload = multer({
 });
 
 export const uploadImageFromBuffer = (buffer, options) => {
+  const transformation =
+    options?.transformation ?? [
+      { width: 1024, height: 1024, crop: "limit", quality: "auto:best" },
+    ];
+
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: "qqna_chat/avatars",
         resource_type: "image",
-        transformation: [{ width: 200, height: 200, crop: "fill" }],
+        transformation,
         ...options,
       },
       (error, result) => {

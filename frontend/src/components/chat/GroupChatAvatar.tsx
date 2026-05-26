@@ -5,9 +5,26 @@ import { Ellipsis } from "lucide-react";
 interface GroupChatAvatarProps {
   participants: Participant[];
   type: "chat" | "sidebar";
+  name?: string;
+  avatarUrl?: string | null;
 }
 
-const GroupChatAvatar = ({ participants, type }: GroupChatAvatarProps) => {
+const GroupChatAvatar = ({
+  participants,
+  type,
+  name = "Nhóm",
+  avatarUrl,
+}: GroupChatAvatarProps) => {
+  if (avatarUrl) {
+    return (
+      <UserAvatar
+        type={type}
+        name={name}
+        avatarUrl={avatarUrl}
+      />
+    );
+  }
+
   const avatars = [];
   const limit = Math.min(participants.length, 4);
 

@@ -99,6 +99,22 @@ export const chatService = {
     const res = await api.patch(`/conversations/${conversationId}/name`, { name });
     return res.data.conversation;
   },
+  async uploadGroupAvatar(conversationId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await api.patch(
+      `/conversations/${conversationId}/avatar`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+
+    return res.data.conversation;
+  },
   async createConversation(
     type: "direct" | "group",
     name: string,

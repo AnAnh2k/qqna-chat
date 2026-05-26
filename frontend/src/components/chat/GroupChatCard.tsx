@@ -1,32 +1,43 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
-import type { Conversation } from "@/types/chat";
+import type { Conversation, Participant } from "@/types/chat";
 import ChatCard from "./ChatCard";
 import UnreadCountBadge from "./UnreadCountBadge";
 import GroupChatAvatar from "./GroupChatAvatar";
 import { ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type LastMessagePreview = NonNullable<Conversation["lastMessage"]> & {
+  senderId?: string | { _id?: string; displayName?: string };
+};
+
 // Helper: lấy senderId bất kể từ DB path (senderId populated) hay socket path (sender._id)
-const getSenderId = (lastMsg: any): string => {
+const getSenderId = (lastMsg?: LastMessagePreview | null): string => {
   if (!lastMsg) return "";
   const raw = lastMsg.senderId;
   if (raw && typeof raw === "object") return raw._id?.toString() ?? "";
   if (raw) return raw.toString();
-  return lastMsg.sender?._id?.toString() ?? "";
+  return typeof lastMsg.sender === "string"
+    ? lastMsg.sender
+    : lastMsg.sender?._id?.toString() ?? "";
 };
 
 // Helper: lấy sender displayName từ DB path hoặc socket path
-const getSenderDisplayName = (lastMsg: any, participants: any[]): string => {
+const getSenderDisplayName = (
+  lastMsg: LastMessagePreview | null,
+  participants: Participant[],
+): string => {
   if (!lastMsg) return "";
   // DB path: senderId là populated object có displayName
   const raw = lastMsg.senderId;
   if (raw && typeof raw === "object" && raw.displayName) return raw.displayName;
   // Socket path: sender.displayName đã được lookup từ participants
-  if (lastMsg.sender?.displayName) return lastMsg.sender.displayName;
+  if (typeof lastMsg.sender !== "string" && lastMsg.sender?.displayName) {
+    return lastMsg.sender.displayName;
+  }
   // Fallback: tìm trong participants theo ID
   const id = getSenderId(lastMsg);
-  const p = participants.find((p: any) => p._id?.toString() === id);
+  const p = participants.find((p) => p._id?.toString() === id);
   return p?.displayName ?? "";
 };
 
@@ -79,7 +90,12 @@ const GroupChatCard = ({ convo }: { convo: Conversation }) => {
       leftSection={
         <>
           {unreadCount > 0 && <UnreadCountBadge unreadCount={unreadCount} />}
-          <GroupChatAvatar participants={convo.participants} type="chat" />
+          <GroupChatAvatar
+            participants={convo.participants}
+            type="chat"
+            name={convo.group?.name}
+            avatarUrl={convo.group?.avatarUrl}
+          />
         </>
       }
       subtitle={

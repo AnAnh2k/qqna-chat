@@ -5,8 +5,10 @@ import { Badge } from "../ui/badge";
 import { cn } from "@/lib/utils";
 import { useSocketStore } from "@/stores/useSocketStore";
 import AvatarUploader from "./AvatarUploader";
+import AvatarPreviewDialog from "../common/AvatarPreviewDialog";
 
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useState } from "react";
 
 interface ProfileCardProps {
   user: User | null;
@@ -15,12 +17,10 @@ interface ProfileCardProps {
 const ProfileCard = ({ user }: ProfileCardProps) => {
   const { onlineUsers } = useSocketStore();
   const { user: currentUser } = useAuthStore();
+  const [avatarPreviewOpen, setAvatarPreviewOpen] = useState(false);
   if (!user) return;
 
-  if (!user.bio) {
-    user.bio = "Will code for food 💻";
-  }
-
+  const bio = user.bio || "Will code for food 💻";
   const isOnline = onlineUsers.includes(user._id) ? true : false;
   const isOwnProfile = currentUser?._id === user._id;
 
@@ -28,12 +28,19 @@ const ProfileCard = ({ user }: ProfileCardProps) => {
     <Card className="overflow-hidden p-0 h-52 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
       <CardContent className="relative h-full flex flex-col sm:flex-row items-center gap-6 p-6 bg-transparent">
         <div className="relative">
-          <UserAvatar
-            type="profile"
-            name={user.displayName}
-            avatarUrl={user.avatarUrl ?? undefined}
-            className="ring-4 ring-white shadow-lg"
-          />
+          <button
+            type="button"
+            onClick={() => user.avatarUrl && setAvatarPreviewOpen(true)}
+            className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            title={user.avatarUrl ? "Xem avatar" : undefined}
+          >
+            <UserAvatar
+              type="profile"
+              name={user.displayName}
+              avatarUrl={user.avatarUrl ?? undefined}
+              className="ring-4 ring-white shadow-lg"
+            />
+          </button>
 
           {/* todo upload avatar */}
           {isOwnProfile && <AvatarUploader />}
@@ -45,9 +52,9 @@ const ProfileCard = ({ user }: ProfileCardProps) => {
             {user.displayName}
           </h1>
 
-          {user.bio && (
+          {bio && (
             <p className="text-white/80 text-sm mt-1 max-w-lg line-clamp-2">
-              {user.bio}
+              {bio}
             </p>
           )}
         </div>
@@ -71,6 +78,12 @@ const ProfileCard = ({ user }: ProfileCardProps) => {
           {isOnline ? "online" : "offline"}
         </Badge>
       </CardContent>
+      <AvatarPreviewDialog
+        open={avatarPreviewOpen}
+        onOpenChange={setAvatarPreviewOpen}
+        imageUrl={user.avatarUrl}
+        name={user.displayName}
+      />
     </Card>
   );
 };

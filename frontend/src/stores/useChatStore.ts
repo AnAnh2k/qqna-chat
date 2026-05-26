@@ -192,9 +192,9 @@ export const useChatStore = create<ChatState>()(
             (c) => c._id === conversation._id,
           );
 
-          const updatedConversation = existingConversation
+          const updatedConversation: Conversation = existingConversation
             ? { ...existingConversation, ...conversation }
-            : conversation;
+            : (conversation as Conversation);
 
           const nextConversations = existingConversation
             ? state.conversations.map((c) =>
@@ -400,6 +400,18 @@ export const useChatStore = create<ChatState>()(
           get().updateConversation(conversation);
         } catch (error) {
           console.error("Lỗi xảy ra khi đổi tên nhóm trong store", error);
+          throw error;
+        }
+      },
+      uploadGroupAvatar: async (conversationId, file) => {
+        try {
+          const conversation = await chatService.uploadGroupAvatar(
+            conversationId,
+            file,
+          );
+          get().updateConversation(conversation);
+        } catch (error) {
+          console.error("Lỗi xảy ra khi upload avatar nhóm trong store", error);
           throw error;
         }
       },

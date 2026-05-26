@@ -1,15 +1,16 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import UserAvatar from "./UserAvatar";
+import GroupChatAvatar from "./GroupChatAvatar";
 import { Badge } from "../ui/badge";
 import { useUserStore } from "@/stores/useUserStore";
 import type { Conversation } from "@/types/chat";
 import { Card } from "../ui/card";
-import { Calendar, LogOut, Shield, Trash2, UserPlus, Users, Pencil, Check, X } from "lucide-react";
+import { Calendar, LogOut, Shield, Trash2, UserPlus, Users, Pencil, Check, X, Camera } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
 import { Button } from "../ui/button";
 import ConfirmDialog from "../common/ConfirmDialog";
-import { useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -17,6 +18,7 @@ import { useFriendStore } from "@/stores/useFriendStore";
 import type { Friend } from "@/types/user";
 import IniviteSuggestionList from "../newGroupChat/IniviteSuggestionList";
 import SelectedUsersList from "../newGroupChat/SelectedUsersList";
+import AvatarPreviewDialog from "../common/AvatarPreviewDialog";
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error !== "object" || error === null || !("response" in error)) {
@@ -41,8 +43,15 @@ interface GroupMembersDialogProps {
 const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogProps) => {
   const { viewProfile } = useUserStore();
   const currentUser = useAuthStore((state) => state.user);
-  const { leaveGroup, disbandGroup, addGroupMembers, renameGroup } = useChatStore();
+  const {
+    leaveGroup,
+    disbandGroup,
+    addGroupMembers,
+    renameGroup,
+    uploadGroupAvatar,
+  } = useChatStore();
   const { friends, getFriends } = useFriendStore();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [addMembersOpen, setAddMembersOpen] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -52,6 +61,8 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
   const [isEditingName, setIsEditingName] = useState(false);
   const [newGroupName, setNewGroupName] = useState(conversation.group?.name || "");
   const [renaming, setRenaming] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreviewOpen, setAvatarPreviewOpen] = useState(false);
   const adminId = conversation.group?.createdBy;
   const isCurrentUserAdmin = currentUser?._id === adminId;
 
@@ -60,12 +71,6 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
       getFriends();
     }
   }, [getFriends, open]);
-
-  useEffect(() => {
-    if (conversation.group?.name) {
-      setNewGroupName(conversation.group.name);
-    }
-  }, [conversation.group?.name]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -182,16 +187,88 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
     }
   };
 
+  const handleGroupAvatarChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Vui lòng chọn file ảnh.");
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      await uploadGroupAvatar(conversation._id, file);
+      toast.success("Đã cập nhật avatar nhóm.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Không thể cập nhật avatar nhóm."));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-md overflow-hidden flex flex-col p-6 max-h-[80vh] bg-gradient-glass">
+        <DialogContent className="w-[min(92vw,820px)] overflow-hidden flex flex-col p-6 max-h-[92vh] bg-gradient-glass">
           <DialogHeader className="mb-4">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Users className="size-5 text-primary" />
               <span>Thành Viên Nhóm ({conversation.participants.length})</span>
             </DialogTitle>
           </DialogHeader>
+
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-3.5 shadow-sm">
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() =>
+                  conversation.group?.avatarUrl && setAvatarPreviewOpen(true)
+                }
+                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title={conversation.group?.avatarUrl ? "Xem avatar nhóm" : undefined}
+              >
+                <GroupChatAvatar
+                  participants={conversation.participants}
+                  type="sidebar"
+                  name={conversation.group?.name}
+                  avatarUrl={conversation.group?.avatarUrl}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm ring-2 ring-background transition-smooth hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-70"
+                title="Đổi avatar nhóm"
+              >
+                <Camera className="size-3.5" />
+              </button>
+            </div>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleGroupAvatarChange}
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Avatar nhóm
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {uploadingAvatar
+                  ? "Đang tải ảnh lên..."
+                  : "Bấm avatar để xem lớn, bấm camera để đổi ảnh."}
+              </p>
+            </div>
+          </div>
 
           {/* Sửa tên nhóm */}
           <div className="mb-4 p-3.5 rounded-xl border border-border/40 bg-muted/20 flex flex-col gap-1.5 shadow-sm">
@@ -243,7 +320,10 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
                   size="sm"
                   variant="ghost"
                   className="h-8 w-8 p-0 rounded-lg hover:bg-muted shrink-0"
-                  onClick={() => setIsEditingName(true)}
+                  onClick={() => {
+                    setNewGroupName(conversation.group?.name || "");
+                    setIsEditingName(true);
+                  }}
                   title="Đổi tên nhóm"
                 >
                   <Pencil className="size-4 text-muted-foreground hover:text-primary transition-colors" />
@@ -252,7 +332,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 beautiful-scrollbar pr-1 py-1">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2 beautiful-scrollbar pr-1 py-1">
             {conversation.participants.map((member) => {
               const isAdmin = member._id === adminId;
 
@@ -377,6 +457,12 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
         loading={loading}
         icon={isCurrentUserAdmin ? Trash2 : LogOut}
         onConfirm={handleGroupAction}
+      />
+      <AvatarPreviewDialog
+        open={avatarPreviewOpen}
+        onOpenChange={setAvatarPreviewOpen}
+        imageUrl={conversation.group?.avatarUrl}
+        name={conversation.group?.name || "nhóm"}
       />
     </>
   );

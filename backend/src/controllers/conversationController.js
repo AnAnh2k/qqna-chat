@@ -6,6 +6,7 @@ import {
   emitNewMessage,
   updateConversationAfterCreateMessage,
 } from "../utils/messageHelper.js";
+import { uploadImageFromBuffer } from "../middlewares/uploadMiddleware.js";
 
 const pair = (a, b) => (a < b ? [a, b] : [b, a]);
 
@@ -578,6 +579,52 @@ export const updateGroupName = async (req, res) => {
     return res.status(200).json({ conversation: formatted });
   } catch (error) {
     console.error("Lỗi khi đổi tên nhóm:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const uploadGroupAvatar = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user._id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "Không tìm thấy file tải lên" });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      type: "group",
+      "participants.userId": userId,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        message: "Nhóm không tồn tại hoặc bạn không phải thành viên",
+      });
+    }
+
+    const result = await uploadImageFromBuffer(file.buffer, {
+      folder: "qqna_chat/group_avatars",
+    });
+
+    conversation.group.avatarUrl = result.secure_url;
+    await conversation.save();
+
+    await conversation.populate([
+      { path: "participants.userId", select: "displayName avatarUrl" },
+      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
+      { path: "seenBy.userId", select: "displayName avatarUrl" },
+    ]);
+
+    const formatted = formatConversation(conversation);
+
+    io.to(conversationId).emit("group-updated", formatted);
+
+    return res.status(200).json({ conversation: formatted });
+  } catch (error) {
+    console.error("Lỗi khi upload avatar nhóm:", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

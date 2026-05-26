@@ -1,5 +1,5 @@
 import { useChatStore } from "@/stores/useChatStore";
-import type { Conversation } from "@/types/chat";
+import type { Conversation, Participant } from "@/types/chat";
 import { SidebarTrigger } from "../ui/sidebar";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useUserStore } from "@/stores/useUserStore";
@@ -19,7 +19,7 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
   const { onlineUsers } = useSocketStore();
   const [membersOpen, setMembersOpen] = useState(false);
 
-  let otherUser: any;
+  let otherUser: Participant | null = null;
 
   chat = chat ?? conversations.find((c) => c._id === activeConversationId);
 
@@ -54,7 +54,7 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
               {chat.type === "direct" ? (
                 <>
                   <button
-                    onClick={() => viewProfile(otherUser?._id)}
+                    onClick={() => viewProfile(otherUser!._id)}
                     className="focus:outline-none cursor-pointer hover:opacity-85 transition-smooth"
                   >
                     <UserAvatar
@@ -80,6 +80,8 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
                   <GroupChatAvatar
                     participants={chat.participants}
                     type="sidebar"
+                    name={chat.group?.name}
+                    avatarUrl={chat.group?.avatarUrl}
                   />
                 </button>
               )}

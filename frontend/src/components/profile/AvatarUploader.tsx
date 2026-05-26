@@ -1,5 +1,5 @@
 import { useUserStore } from "@/stores/useUserStore";
-import { useRef } from "react";
+import { type ChangeEvent, useRef } from "react";
 import { Button } from "../ui/button";
 import { Camera } from "lucide-react";
 
@@ -11,8 +11,10 @@ const AvatarUploader = () => {
     fileInputRef.current?.click();
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
+
     if (!file) {
       return;
     }
@@ -35,7 +37,13 @@ const AvatarUploader = () => {
         <Camera className="size-4" />
       </Button>
 
-      <input type="file" hidden ref={fileInputRef} onChange={handleUpload} />
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        ref={fileInputRef}
+        onChange={handleUpload}
+      />
     </>
   );
 };

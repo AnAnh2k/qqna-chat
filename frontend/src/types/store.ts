@@ -1,5 +1,5 @@
 import type { Socket } from "socket.io-client";
-import type { Conversation, Message } from "./chat";
+import type { Conversation, Message, Reaction } from "./chat";
 import type { Friend, FriendRequest, User } from "./user";
 import type { UpdateProfilePayload } from "@/services/userService";
 
@@ -72,7 +72,9 @@ export interface ChatState {
   // add message
   addMessage: (message: Message) => Promise<void>;
   // update convo
-  updateConversation: (conversation: any) => void;
+  updateConversation: (
+    conversation: Partial<Conversation> & Pick<Conversation, "_id">,
+  ) => void;
   removeConversation: (conversationId: string) => void;
   markAsSeen: () => Promise<void>;
   addConvo: (convo: Conversation) => void;
@@ -86,12 +88,13 @@ export interface ChatState {
   leaveGroup: (conversationId: string) => Promise<void>;
   disbandGroup: (conversationId: string) => Promise<void>;
   renameGroup: (conversationId: string, name: string) => Promise<void>;
+  uploadGroupAvatar: (conversationId: string, file: File) => Promise<void>;
   uploadMessageImage: (file: File) => Promise<string>;
   recallMessage: (messageId: string) => Promise<void>;
   handleMessageRecalled: (messageId: string, conversationId: string) => void;
   setReplyingTo: (message: Message | null) => void;
   reactToMessage: (messageId: string, emoji: string) => Promise<void>;
-  handleMessageReaction: (messageId: string, conversationId: string, reactions: any[]) => void;
+  handleMessageReaction: (messageId: string, conversationId: string, reactions: Reaction[]) => void;
 }
 
 export interface SocketState {
