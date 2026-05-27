@@ -1,6 +1,7 @@
 const URL_REGEX = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
 const SAFE_URL_REGEX = /^(https?:|mailto:|tel:|\/)/i;
 const HTML_TAG_REGEX = /<\/?[a-z][\s\S]*>/i;
+const ESCAPED_NBSP_REGEX = /&(?:amp;)*nbsp;/gi;
 
 const ALLOWED_TAGS = new Set([
   "A",
@@ -144,11 +145,13 @@ const sanitizeNode = (node: ChildNode, document: Document): Node | null => {
 };
 
 export const normalizeHtmlInput = (value: string) => {
-  if (HTML_TAG_REGEX.test(value)) {
-    return value;
+  const normalizedSpaces = value.replace(ESCAPED_NBSP_REGEX, "\u00a0");
+
+  if (HTML_TAG_REGEX.test(normalizedSpaces)) {
+    return normalizedSpaces;
   }
 
-  const escaped = value
+  const escaped = normalizedSpaces
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");

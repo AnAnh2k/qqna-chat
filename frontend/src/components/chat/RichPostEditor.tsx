@@ -73,6 +73,7 @@ const RichPostEditor = forwardRef<RichPostEditorHandle, RichPostEditorProps>(
   const syncDomFromValue = () => {
     const editor = editorRef.current;
     if (!editor) return;
+    if (document.activeElement === editor) return;
 
     if (editor.innerHTML !== normalizedValue) {
       editor.innerHTML = normalizedValue;
