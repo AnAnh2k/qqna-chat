@@ -1,6 +1,7 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { Conversation, Participant } from "@/types/chat";
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "../ui/button";
 import { AtSign, ImagePlus, Send, UserPlus, Users, X, Loader2, FileText } from "lucide-react";
 import { Textarea } from "../ui/textarea";
@@ -19,6 +20,18 @@ type MentionSuggestion =
 
 const mentionAllLabel = "mọi người" as const;
 const COMPOSER_MAX_HEIGHT = 144;
+const MENTION_DROPDOWN_WIDTH = 288;
+const MENTION_DROPDOWN_MAX_HEIGHT = 260;
+const MENTION_DROPDOWN_GAP = 8;
+const MENTION_DROPDOWN_VIEWPORT_PADDING = 12;
+
+type MentionDropdownPosition = {
+  left: number;
+  width: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+};
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
@@ -32,6 +45,8 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [composerExpanded, setComposerExpanded] = useState(false);
+  const [mentionDropdownPosition, setMentionDropdownPosition] =
+    useState<MentionDropdownPosition | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -68,10 +83,8 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     };
   }, []);
 
-  if (!user) return null;
-
   const mentionableMembers =
-    selectedConvo.type === "group"
+    selectedConvo.type === "group" && user
       ? selectedConvo.participants.filter((member) => member._id !== user._id)
       : [];
   const mentionMatch = value.match(/(?:^|\s)@([^\s@]*)$/);
@@ -97,6 +110,96 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           .map((member) => ({ ...member, type: "member" as const })),
       ]
     : [];
+  const hasMentionSuggestions =
+    showMentionSuggestions && mentionSuggestions.length > 0;
+
+  const updateMentionDropdownPosition = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const rect = input.getBoundingClientRect();
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const viewportOffsetLeft = window.visualViewport?.offsetLeft ?? 0;
+    const viewportOffsetTop = window.visualViewport?.offsetTop ?? 0;
+    const viewportLeft = viewportOffsetLeft + MENTION_DROPDOWN_VIEWPORT_PADDING;
+    const viewportRight =
+      viewportOffsetLeft + viewportWidth - MENTION_DROPDOWN_VIEWPORT_PADDING;
+    const viewportTop = viewportOffsetTop + MENTION_DROPDOWN_VIEWPORT_PADDING;
+    const viewportBottom =
+      viewportOffsetTop + viewportHeight - MENTION_DROPDOWN_VIEWPORT_PADDING;
+    const width = Math.min(
+      MENTION_DROPDOWN_WIDTH,
+      Math.max(0, viewportRight - viewportLeft),
+    );
+    const preferredLeft = Math.min(
+      Math.max(rect.left, viewportLeft),
+      viewportRight - width,
+    );
+    const spaceAbove = rect.top - viewportTop - MENTION_DROPDOWN_GAP;
+    const spaceBelow = viewportBottom - rect.bottom - MENTION_DROPDOWN_GAP;
+    const openAbove = spaceAbove >= 120 || spaceAbove >= spaceBelow;
+    const maxHeight = Math.max(
+      96,
+      Math.min(
+        MENTION_DROPDOWN_MAX_HEIGHT,
+        Math.max(openAbove ? spaceAbove : spaceBelow, 96),
+      ),
+    );
+
+    setMentionDropdownPosition(
+      openAbove
+        ? {
+            left: preferredLeft,
+            width,
+            maxHeight,
+            bottom: viewportHeight - rect.top + MENTION_DROPDOWN_GAP,
+          }
+        : {
+            left: preferredLeft,
+            width,
+            maxHeight,
+            top: rect.bottom + MENTION_DROPDOWN_GAP,
+          },
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!hasMentionSuggestions) {
+      setMentionDropdownPosition(null);
+      return;
+    }
+
+    updateMentionDropdownPosition();
+  }, [
+    hasMentionSuggestions,
+    value,
+    replyingTo,
+    imagePreviews.length,
+    composerExpanded,
+    updateMentionDropdownPosition,
+  ]);
+
+  useEffect(() => {
+    if (!hasMentionSuggestions) return;
+
+    const handlePositionChange = () => updateMentionDropdownPosition();
+    const visualViewport = window.visualViewport;
+
+    window.addEventListener("resize", handlePositionChange);
+    window.addEventListener("scroll", handlePositionChange, true);
+    visualViewport?.addEventListener("resize", handlePositionChange);
+    visualViewport?.addEventListener("scroll", handlePositionChange);
+
+    return () => {
+      window.removeEventListener("resize", handlePositionChange);
+      window.removeEventListener("scroll", handlePositionChange, true);
+      visualViewport?.removeEventListener("resize", handlePositionChange);
+      visualViewport?.removeEventListener("scroll", handlePositionChange);
+    };
+  }, [hasMentionSuggestions, updateMentionDropdownPosition]);
+
+  if (!user) return null;
 
   const getMentionedUserIds = (content: string) => {
     const lowerContent = content.toLowerCase();
@@ -414,8 +517,19 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
             rows={1}
             className="box-border block w-full max-w-full min-w-0 min-h-9 max-h-36 resize-none overflow-x-hidden overflow-y-hidden whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [line-break:anywhere] bg-white py-2 pl-2.5 pr-20 text-sm leading-5 border-border/50 focus:border-primary/50 transition-smooth beautiful-scrollbar"
           />
-          {showMentionSuggestions && mentionSuggestions.length > 0 && (
-            <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-lg border border-border/70 bg-popover p-1 shadow-xl">
+          {hasMentionSuggestions &&
+            mentionDropdownPosition &&
+            createPortal(
+              <div
+                className="fixed z-[9999] overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-popover p-1 shadow-2xl ring-1 ring-foreground/10 beautiful-scrollbar"
+                style={{
+                  left: mentionDropdownPosition.left,
+                  width: mentionDropdownPosition.width,
+                  maxHeight: mentionDropdownPosition.maxHeight,
+                  top: mentionDropdownPosition.top,
+                  bottom: mentionDropdownPosition.bottom,
+                }}
+              >
               {mentionSuggestions.map((mention) => (
                 <button
                   key={mention._id}
@@ -451,8 +565,9 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
                   <AtSign className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               ))}
-            </div>
-          )}
+              </div>,
+              document.body,
+            )}
           <div
             className={`absolute right-2 flex size-8 items-center justify-center ${
               composerExpanded
