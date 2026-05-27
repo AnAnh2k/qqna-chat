@@ -26,6 +26,7 @@ import ConfirmDialog from "../common/ConfirmDialog";
 import CreatePostDialog from "./CreatePostDialog";
 import { extractImageUrlsFromHtml, formatRichPostHtml } from "@/lib/richText";
 import ForwardMessageDialog from "./ForwardMessageDialog";
+import { getReplyPreviewText } from "@/lib/messagePreview";
 
 interface MessageItemProps {
   message: Message;
@@ -762,14 +763,8 @@ const MessageItem = ({
                 <span className="font-bold block text-[9px] text-primary/70 mb-0.5">
                   {message.replyTo.senderId === user?._id ? "Bạn" : (selectedConvo.participants.find(p => p._id === message.replyTo?.senderId)?.displayName || "Người dùng")} đã trả lời:
                 </span>
-                <span className="block truncate">
-                  {message.replyTo.isRecalled
-                    ? "Tin nhắn đã bị thu hồi"
-                    : (message.replyTo.content ||
-                       (message.replyTo.imgUrl || (message.replyTo.imgUrls && message.replyTo.imgUrls.length > 0)
-                         ? "[Hình ảnh]"
-                         : "[Bài viết]"))
-                  }
+                <span className="line-clamp-2 break-words">
+                  {getReplyPreviewText(message.replyTo)}
                 </span>
               </div>
             )}

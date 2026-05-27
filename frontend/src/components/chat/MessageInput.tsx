@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import UserAvatar from "./UserAvatar";
 import CreatePostDialog from "./CreatePostDialog";
 import AvatarPreviewDialog from "../common/AvatarPreviewDialog";
+import { getReplyPreviewText } from "@/lib/messagePreview";
 
 type MentionSuggestion =
   | { type: "all"; _id: "all"; displayName: "mọi người" }
@@ -320,8 +321,8 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
               <span className="inline-block border-l-2 border-primary h-2.5 mr-0.5" />
               Đang trả lời {replySenderName}
             </span>
-            <span className="text-xs text-muted-foreground truncate pr-4">
-              {replyingTo.content || (replyingTo.imgUrl || (replyingTo.imgUrls && replyingTo.imgUrls.length > 0) ? "[Hình ảnh]" : "[Tin nhắn]")}
+            <span className="line-clamp-2 break-words text-xs text-muted-foreground pr-4">
+              {getReplyPreviewText(replyingTo)}
             </span>
           </div>
           <button
