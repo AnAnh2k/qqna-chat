@@ -69,30 +69,19 @@ export const uploadAvatar = async (req, res) => {
 export const updateMe = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { displayName, username, email, phone, bio } = req.body;
+    const { displayName, email, phone, bio } = req.body;
 
     const updates = {};
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "username")) {
+      return res.status(400).json({ message: "Không thể thay đổi tên người dùng" });
+    }
 
     if (displayName !== undefined) {
       if (!displayName.trim()) {
         return res.status(400).json({ message: "Họ và tên không được để trống" });
       }
       updates.displayName = displayName.trim();
-    }
-
-    if (username !== undefined) {
-      if (!username.trim()) {
-        return res.status(400).json({ message: "Tên người dùng không được để trống" });
-      }
-      const normalizedUsername = username.trim().toLowerCase();
-      const duplicateUsername = await User.findOne({
-        _id: { $ne: userId },
-        username: normalizedUsername,
-      });
-      if (duplicateUsername) {
-        return res.status(409).json({ message: "Tên người dùng đã tồn tại" });
-      }
-      updates.username = normalizedUsername;
     }
 
     if (email !== undefined) {

@@ -3,7 +3,7 @@ import type { User } from "@/types/user";
 
 export type UpdateProfilePayload = Pick<
   User,
-  "displayName" | "username" | "email"
+  "displayName" | "email"
 > & {
   phone?: string;
   bio?: string;

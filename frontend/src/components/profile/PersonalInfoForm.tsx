@@ -16,14 +16,13 @@ import ConfirmDialog from "../common/ConfirmDialog";
 import { useUserStore } from "@/stores/useUserStore";
 
 type EditableField = {
-  key: keyof Pick<User, "displayName" | "username" | "email" | "phone">;
+  key: keyof Pick<User, "displayName" | "email" | "phone">;
   label: string;
   type?: string;
 };
 
 const PERSONAL_FIELDS: EditableField[] = [
   { key: "displayName", label: "Tên hiển thị" },
-  { key: "username", label: "Tên người dùng" },
   { key: "email", label: "Email", type: "email" },
   { key: "phone", label: "Số điện thoại" },
 ];
@@ -60,7 +59,6 @@ const PersonalInfoForm = ({ userInfo }: Props) => {
 
     return (
       form.displayName !== (userInfo.displayName ?? "") ||
-      form.username !== (userInfo.username ?? "") ||
       form.email !== (userInfo.email ?? "") ||
       form.phone !== (userInfo.phone ?? "") ||
       form.bio !== (userInfo.bio ?? "")
@@ -80,7 +78,6 @@ const PersonalInfoForm = ({ userInfo }: Props) => {
       setSaving(true);
       await updateProfile({
         displayName: form.displayName,
-        username: form.username,
         email: form.email,
         phone: form.phone,
         bio: form.bio,
@@ -107,6 +104,16 @@ const PersonalInfoForm = ({ userInfo }: Props) => {
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Tên người dùng</Label>
+                <Input
+                  id="username"
+                  value={form.username}
+                  readOnly
+                  className="glass-light border-border/30 bg-muted/40 text-muted-foreground"
+                />
+              </div>
+
               {PERSONAL_FIELDS.map(({ key, label, type }) => (
                 <div key={key} className="space-y-2">
                   <Label htmlFor={key}>{label}</Label>

@@ -55,8 +55,9 @@ Hệ thống đã hoàn thiện luồng trải nghiệm người dùng từ truy
 
 ### 3. Hồ Sơ Cá Nhân & Cài Đặt Tài Khoản (Profile & Account Settings)
 * Xem hồ sơ cá nhân và hồ sơ người dùng khác.
-* Cập nhật thông tin cá nhân: tên hiển thị, username, email, số điện thoại và tiểu sử.
-* Kiểm tra trùng username/email khi cập nhật thông tin.
+* Cập nhật thông tin cá nhân: tên hiển thị, email, số điện thoại và tiểu sử.
+* Username được giữ cố định sau khi đăng ký.
+* Kiểm tra trùng email khi cập nhật thông tin.
 * Đổi mật khẩu với kiểm tra mật khẩu hiện tại, độ dài mật khẩu mới và xác nhận mật khẩu.
 * Bật/tắt hiển thị mật khẩu trong form đổi mật khẩu.
 * Tải avatar cá nhân lên Cloudinary qua `multer` buffer upload.

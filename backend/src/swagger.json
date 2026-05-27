@@ -182,7 +182,6 @@
                 "type": "object",
                 "properties": {
                   "displayName": { "type": "string", "example": "User Bốn Mới" },
-                  "username": { "type": "string", "example": "user4new" },
                   "email": { "type": "string", "format": "email", "example": "user4new@gmail.com" },
                   "phone": { "type": "string", "example": "0987654321" },
                   "bio": { "type": "string", "example": "Hello world, I'm new!" }
@@ -206,10 +205,10 @@
             }
           },
           "400": {
-            "description": "Họ tên, tên người dùng hoặc email trống"
+            "description": "Họ tên/email trống hoặc request cố gắng thay đổi username"
           },
           "409": {
-            "description": "Tên người dùng hoặc email đã tồn tại ở tài khoản khác"
+            "description": "Email đã tồn tại ở tài khoản khác"
           },
           "500": {
             "description": "Lỗi hệ thống"
