@@ -281,6 +281,8 @@ const MessageItem = ({
       300000; // 5 phút
 
   const isGroupBreak = isShowTime || message.senderId !== prev?.senderId;
+  const shouldShowGroupSenderName =
+    selectedConvo.type === "group" && !message.isOwn && isGroupBreak;
 
   const allImages =
     message.imgUrls && message.imgUrls.length > 0
@@ -707,6 +709,17 @@ const MessageItem = ({
               message.isOwn ? "items-end" : "items-start",
             )}
           >
+            {shouldShowGroupSenderName && (
+              <button
+                type="button"
+                onClick={() => viewProfile(message.senderId)}
+                className="ml-1 max-w-[220px] truncate text-left text-xs font-semibold text-muted-foreground transition-smooth hover:text-foreground"
+                title={participant?.displayName ?? "QQNA"}
+              >
+                {participant?.displayName ?? "QQNA"}
+              </button>
+            )}
+
             {/* Quoted parent message */}
             {message.replyTo && (
               <div
