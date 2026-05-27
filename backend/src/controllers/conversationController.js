@@ -21,6 +21,17 @@ const formatConversation = (conversation) => {
   return { ...conversation.toObject(), participants };
 };
 
+const conversationPopulatePaths = [
+  { path: "participants.userId", select: "displayName avatarUrl" },
+  { path: "lastMessage.senderId", select: "displayName avatarUrl" },
+  { path: "seenBy.userId", select: "displayName avatarUrl" },
+  {
+    path: "pinnedMessages.messageId",
+    populate: { path: "senderId", select: "displayName avatarUrl" },
+  },
+  { path: "pinnedMessages.pinnedBy", select: "displayName avatarUrl" },
+];
+
 export const createConversation = async (req, res) => {
   try {
     const { type, name, memberIds } = req.body;
@@ -77,14 +88,7 @@ export const createConversation = async (req, res) => {
       return res.status(400).json({ message: "Conversation type không hợp lệ" });
     }
 
-    await conversation.populate([
-      { path: "participants.userId", select: "displayName avatarUrl" },
-      {
-        path: "seenBy.userId",
-        select: "displayName avatarUrl",
-      },
-      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-    ]);
+    await conversation.populate(conversationPopulatePaths);
 
     const participants = (conversation.participants || []).map((p) => ({
       _id: p.userId?._id,
@@ -130,6 +134,14 @@ export const getConversations = async (req, res) => {
       })
       .populate({
         path: "seenBy.userId",
+        select: "displayName avatarUrl",
+      })
+      .populate({
+        path: "pinnedMessages.messageId",
+        populate: { path: "senderId", select: "displayName avatarUrl" },
+      })
+      .populate({
+        path: "pinnedMessages.pinnedBy",
         select: "displayName avatarUrl",
       });
 
@@ -313,6 +325,60 @@ export const markAsSeen = async (req, res) => {
   }
 };
 
+export const togglePinnedMessage = async (req, res) => {
+  try {
+    const { conversationId, messageId } = req.params;
+    const userId = req.user._id;
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      "participants.userId": userId,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        message: "Cuộc trò chuyện không tồn tại hoặc bạn không phải thành viên",
+      });
+    }
+
+    const message = await Message.findOne({
+      _id: messageId,
+      conversationId,
+      isRecalled: { $ne: true },
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: "Không tìm thấy tin nhắn để ghim" });
+    }
+
+    const pinnedIndex = conversation.pinnedMessages.findIndex(
+      (item) => item.messageId.toString() === messageId,
+    );
+    const pinned = pinnedIndex === -1;
+
+    if (pinned) {
+      conversation.pinnedMessages.push({
+        messageId,
+        pinnedBy: userId,
+        pinnedAt: new Date(),
+      });
+    } else {
+      conversation.pinnedMessages.splice(pinnedIndex, 1);
+    }
+
+    await conversation.save();
+    await conversation.populate(conversationPopulatePaths);
+
+    const formatted = formatConversation(conversation);
+    io.to(conversationId).emit("group-updated", formatted);
+
+    return res.status(200).json({ conversation: formatted, pinned });
+  } catch (error) {
+    console.error("Lỗi khi ghim tin nhắn:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
 export const clearConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
@@ -373,11 +439,7 @@ export const leaveGroup = async (req, res) => {
     conversation.unreadCounts?.delete(userId.toString());
     await conversation.save();
 
-    await conversation.populate([
-      { path: "participants.userId", select: "displayName avatarUrl" },
-      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy.userId", select: "displayName avatarUrl" },
-    ]);
+    await conversation.populate(conversationPopulatePaths);
 
     const participants = (conversation.participants || []).map((p) => ({
       _id: p.userId?._id,
@@ -461,11 +523,7 @@ export const addGroupMembers = async (req, res) => {
     );
     await conversation.save();
 
-    await conversation.populate([
-      { path: "participants.userId", select: "displayName avatarUrl" },
-      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy.userId", select: "displayName avatarUrl" },
-    ]);
+    await conversation.populate(conversationPopulatePaths);
 
     const addedNames = conversation.participants
       .filter((p) => newMemberIds.includes(p.userId?._id.toString()))
@@ -567,11 +625,7 @@ export const updateGroupName = async (req, res) => {
     updateConversationAfterCreateMessage(conversation, systemMessage, userId);
     await conversation.save();
 
-    await conversation.populate([
-      { path: "participants.userId", select: "displayName avatarUrl" },
-      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy.userId", select: "displayName avatarUrl" },
-    ]);
+    await conversation.populate(conversationPopulatePaths);
 
     const formatted = formatConversation(conversation);
 
@@ -614,11 +668,7 @@ export const uploadGroupAvatar = async (req, res) => {
     conversation.group.avatarUrl = result.secure_url;
     await conversation.save();
 
-    await conversation.populate([
-      { path: "participants.userId", select: "displayName avatarUrl" },
-      { path: "lastMessage.senderId", select: "displayName avatarUrl" },
-      { path: "seenBy.userId", select: "displayName avatarUrl" },
-    ]);
+    await conversation.populate(conversationPopulatePaths);
 
     const formatted = formatConversation(conversation);
 

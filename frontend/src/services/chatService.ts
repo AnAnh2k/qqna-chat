@@ -77,6 +77,12 @@ export const chatService = {
     const res = await api.patch(`/conversations/${conversationId}/seen`);
     return res.data;
   },
+  async togglePinnedMessage(conversationId: string, messageId: string) {
+    const res = await api.patch(
+      `/conversations/${conversationId}/messages/${messageId}/pin`,
+    );
+    return res.data;
+  },
   async clearConversation(conversationId: string) {
     const res = await api.delete(`/conversations/${conversationId}/clear`);
     return res.data;

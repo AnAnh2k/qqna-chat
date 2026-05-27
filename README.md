@@ -113,6 +113,7 @@ Hệ thống đã hoàn thiện luồng trải nghiệm người dùng từ truy
 * Trả lời tin nhắn, hiển thị block quote của tin nhắn gốc.
 * Click vào tin nhắn được reply để cuộn về tin nhắn gốc nếu còn trong danh sách.
 * Chuyển tiếp tin nhắn sang bạn bè hoặc nhóm khác.
+* Ghim tin nhắn văn bản, ảnh hoặc bài viết; mở danh sách ghim và cuộn tới tin nhắn gốc.
 * Mention thành viên trong nhóm bằng `@tên`, hỗ trợ `@mọi người`.
 * Gửi thông báo mention realtime cho người được nhắc.
 * Hiển thị mention nổi bật trong nội dung tin nhắn.

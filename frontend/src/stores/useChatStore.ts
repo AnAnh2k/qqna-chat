@@ -369,6 +369,20 @@ export const useChatStore = create<ChatState>()(
           console.error("Lỗi xảy ra khi gọi markAsSeen trong store", error);
         }
       },
+      togglePinnedMessage: async (conversationId, messageId) => {
+        try {
+          const { conversation, pinned } = await chatService.togglePinnedMessage(
+            conversationId,
+            messageId,
+          );
+          get().updateConversation(conversation);
+          playActionSound("success");
+          return pinned;
+        } catch (error) {
+          console.error("Lỗi xảy ra khi ghim tin nhắn trong store", error);
+          throw error;
+        }
+      },
       addConvo: (convo) => {
         set((state) => {
           const exists = state.conversations.some(

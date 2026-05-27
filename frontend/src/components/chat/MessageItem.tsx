@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil, ListTree, Forward } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil, ListTree, Forward, Pin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
 import { useState, useEffect, useMemo } from "react";
@@ -219,6 +219,7 @@ const MessageItem = ({
     recallMessage,
     reactToMessage,
     setReplyingTo,
+    togglePinnedMessage,
     updatePostMessage,
     uploadMessageImage,
   } = useChatStore();
@@ -245,6 +246,14 @@ const MessageItem = ({
   const [postReaderOpen, setPostReaderOpen] = useState(false);
   const [postEditOpen, setPostEditOpen] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
+  const isPinned = (selectedConvo.pinnedMessages ?? []).some((pinned) => {
+    const pinnedId =
+      typeof pinned.messageId === "string"
+        ? pinned.messageId
+        : pinned.messageId?._id;
+
+    return pinnedId === message._id;
+  });
 
   const handleRecall = async () => {
     try {
@@ -271,6 +280,15 @@ const MessageItem = ({
     } catch (error) {
       console.error(error);
       throw error;
+    }
+  };
+
+  const handleTogglePinned = async () => {
+    try {
+      const pinned = await togglePinnedMessage(selectedConvo._id, message._id);
+      toast.success(pinned ? "Đã ghim tin nhắn" : "Đã bỏ ghim tin nhắn");
+    } catch {
+      toast.error("Không thể cập nhật ghim tin nhắn. Vui lòng thử lại!");
     }
   };
 
@@ -910,6 +928,13 @@ const MessageItem = ({
                       >
                         <Forward className="size-3.5" />
                         Chuyển tiếp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleTogglePinned}
+                        className="cursor-pointer text-xs gap-1.5"
+                      >
+                        <Pin className="size-3.5" />
+                        {isPinned ? "Bỏ ghim" : "Ghim"}
                       </DropdownMenuItem>
                       {message.isOwn && message.messageType === "post" && (
                         <DropdownMenuItem

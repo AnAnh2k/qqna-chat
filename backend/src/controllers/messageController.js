@@ -7,6 +7,17 @@ import {
 import { io } from "../socket/index.js";
 import { uploadImageFromBuffer } from "../middlewares/uploadMiddleware.js";
 
+const conversationPopulatePaths = [
+  { path: "participants.userId", select: "displayName avatarUrl" },
+  { path: "seenBy.userId", select: "displayName avatarUrl" },
+  { path: "lastMessage.senderId", select: "displayName avatarUrl" },
+  {
+    path: "pinnedMessages.messageId",
+    populate: { path: "senderId", select: "displayName avatarUrl" },
+  },
+  { path: "pinnedMessages.pinnedBy", select: "displayName avatarUrl" },
+];
+
 const formatConversation = (conversation) => {
   const participants = (conversation.participants || []).map((p) => ({
     _id: p.userId?._id,
@@ -77,9 +88,7 @@ export const sendDirectMessage = async (req, res) => {
 
     if (createdConversation) {
       const populatedConversation = await Conversation.findById(conversation._id)
-        .populate({ path: "participants.userId", select: "displayName avatarUrl" })
-        .populate({ path: "seenBy.userId", select: "displayName avatarUrl" })
-        .populate({ path: "lastMessage.senderId", select: "displayName avatarUrl" });
+        .populate(conversationPopulatePaths);
 
       const formattedConversation = formatConversation(populatedConversation);
       io.to(senderId.toString()).emit("new-group", formattedConversation);
@@ -178,6 +187,23 @@ export const recallMessage = async (req, res) => {
     message.imgUrl = undefined;
     message.isRecalled = true;
     await message.save();
+
+    const conversation = await Conversation.findById(message.conversationId);
+    if (conversation) {
+      const prevPinnedCount = conversation.pinnedMessages.length;
+      conversation.pinnedMessages = conversation.pinnedMessages.filter(
+        (item) => item.messageId.toString() !== message._id.toString(),
+      );
+
+      if (conversation.pinnedMessages.length !== prevPinnedCount) {
+        await conversation.save();
+        await conversation.populate(conversationPopulatePaths);
+        io.to(message.conversationId.toString()).emit(
+          "group-updated",
+          formatConversation(conversation),
+        );
+      }
+    }
 
     // Phát sự kiện socket tới phòng hội thoại
     io.to(message.conversationId.toString()).emit("message-recalled", {

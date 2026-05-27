@@ -17,6 +17,12 @@ export interface SeenUser {
   messageId: string;
 }
 
+export interface MessageUser {
+  _id: string;
+  displayName: string;
+  avatarUrl?: string | null;
+}
+
 export interface Group {
   name: string;
   avatarUrl?: string | null;
@@ -47,6 +53,7 @@ export interface Conversation {
   lastMessageAt: string;
   seenBy: SeenUser[];
   lastMessage: LastMessage | null;
+  pinnedMessages?: PinnedMessage[];
   unreadCounts: Record<string, number>; // key = userId, value = unread count
   createdAt: string;
   updatedAt: string;
@@ -60,6 +67,16 @@ export interface ConversationResponse {
 export interface Reaction {
   userId: string;
   emoji: string;
+}
+
+export interface PinnedMessage {
+  messageId: PinnedMessageContent | string;
+  pinnedBy?: string | MessageUser;
+  pinnedAt: string;
+}
+
+export interface PinnedMessageContent extends Omit<Message, "senderId"> {
+  senderId: string | MessageUser;
 }
 
 export interface Message {

@@ -11,6 +11,7 @@ import {
   addGroupMembers,
   updateGroupName,
   uploadGroupAvatar,
+  togglePinnedMessage,
 } from "../controllers/conversationController.js";
 import { checkFriendship } from "../middlewares/friendMiddleware.js";
 import { upload } from "../middlewares/uploadMiddleware.js";
@@ -25,6 +26,7 @@ router.patch("/:conversationId/members", addGroupMembers);
 router.patch("/:conversationId/leave", leaveGroup);
 router.patch("/:conversationId/name", updateGroupName);
 router.patch("/:conversationId/avatar", upload.single("file"), uploadGroupAvatar);
+router.patch("/:conversationId/messages/:messageId/pin", togglePinnedMessage);
 router.delete("/:conversationId/clear", clearConversation);
 router.delete("/:conversationId/disband", disbandGroup);
 

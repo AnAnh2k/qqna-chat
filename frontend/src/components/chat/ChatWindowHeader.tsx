@@ -9,8 +9,10 @@ import GroupChatAvatar from "./GroupChatAvatar";
 import StatusBadge from "./StatusBadge";
 import { useSocketStore } from "@/stores/useSocketStore";
 import { useState } from "react";
-import { Users } from "lucide-react";
+import { Pin, Users } from "lucide-react";
 import GroupMembersDialog from "./GroupMembersDialog";
+import PinnedMessagesDialog from "./PinnedMessagesDialog";
+import { Button } from "../ui/button";
 
 const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
   const { conversations, activeConversationId } = useChatStore();
@@ -18,6 +20,7 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
   const { viewProfile } = useUserStore();
   const { onlineUsers } = useSocketStore();
   const [membersOpen, setMembersOpen] = useState(false);
+  const [pinnedOpen, setPinnedOpen] = useState(false);
 
   let otherUser: Participant | null = null;
 
@@ -37,6 +40,8 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
 
     if (!user || !otherUser) return null;
   }
+
+  const pinnedCount = chat.pinnedMessages?.length ?? 0;
 
   return (
     <>
@@ -102,6 +107,22 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
                 </button>
               )}
             </div>
+
+            {pinnedCount > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPinnedOpen(true)}
+                className="ml-auto h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-semibold"
+              >
+                <Pin className="size-3.5" />
+                Ghim
+                <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                  {pinnedCount}
+                </span>
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -109,6 +130,11 @@ const ChatWindowHeader = ({ chat }: { chat?: Conversation }) => {
       <GroupMembersDialog
         open={membersOpen}
         setOpen={setMembersOpen}
+        conversation={chat}
+      />
+      <PinnedMessagesDialog
+        open={pinnedOpen}
+        onOpenChange={setPinnedOpen}
         conversation={chat}
       />
     </>
