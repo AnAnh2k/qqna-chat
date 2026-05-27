@@ -209,6 +209,12 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  html,
+  body,
+  #root {
+    @apply min-w-0 overflow-x-hidden;
+  }
+
   body {
     @apply text-slate-800 dark:text-slate-200 bg-background;
   }

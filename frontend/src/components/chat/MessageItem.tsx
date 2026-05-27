@@ -836,7 +836,7 @@ const MessageItem = ({
                   )}
                 >
                   {message.isRecalled ? (
-                    <p className="text-sm leading-snug break-words">
+                    <p className="max-w-full whitespace-pre-wrap text-sm leading-snug break-words [overflow-wrap:anywhere] [word-break:break-word]">
                       Tin nhắn đã được thu hồi
                     </p>
                   ) : (
@@ -844,7 +844,7 @@ const MessageItem = ({
                       {/* Ảnh kèm text — click ảnh để phóng to */}
                       {allImages.length > 0 && renderImageGrid(true)}
                       {message.content && (
-                        <p className="text-sm leading-snug break-words px-2.5 py-1.5">
+                        <p className="max-w-full whitespace-pre-wrap text-sm leading-snug break-words [overflow-wrap:anywhere] [word-break:break-word] px-2.5 py-1.5">
                           {renderMessageContent(message.content)}
                         </p>
                       )}

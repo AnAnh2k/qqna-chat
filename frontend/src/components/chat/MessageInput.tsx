@@ -1,9 +1,9 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { Conversation, Participant } from "@/types/chat";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { AtSign, ImagePlus, Send, UserPlus, Users, X, Loader2, FileText } from "lucide-react";
-import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import EmojiPicker from "./EmojiPicker";
 import { useChatStore } from "@/stores/useChatStore";
 import { useFriendStore } from "@/stores/useFriendStore";
@@ -17,9 +17,7 @@ type MentionSuggestion =
   | (Participant & { type: "member" });
 
 const mentionAllLabel = "mọi người" as const;
-
-const escapeRegExp = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const COMPOSER_MAX_HEIGHT = 144;
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
@@ -32,8 +30,9 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const [uploading, setUploading] = useState(false);
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [composerExpanded, setComposerExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     getFriends();
@@ -44,6 +43,18 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
 
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [replyingTo]);
+
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    input.style.height = "auto";
+    const nextHeight = Math.min(input.scrollHeight, COMPOSER_MAX_HEIGHT);
+    input.style.height = `${nextHeight}px`;
+    setComposerExpanded(nextHeight > 40);
+    input.style.overflowY =
+      input.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
+  }, [value]);
 
   const previewsRef = useRef<string[]>([]);
   useEffect(() => {
@@ -62,11 +73,6 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     selectedConvo.type === "group"
       ? selectedConvo.participants.filter((member) => member._id !== user._id)
       : [];
-  const mentionLabels = [
-    mentionAllLabel,
-    ...mentionableMembers.map((member) => member.displayName),
-  ].sort((a, b) => b.length - a.length);
-
   const mentionMatch = value.match(/(?:^|\s)@([^\s@]*)$/);
   const mentionQuery = mentionMatch?.[1]?.toLowerCase() ?? "";
   const showMentionSuggestions =
@@ -110,36 +116,6 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
       current.replace(/(^|\s)@([^\s@]*)$/, `$1@${mention.displayName} `),
     );
     requestAnimationFrame(() => inputRef.current?.focus());
-  };
-
-  const renderComposerValue = (content: string) => {
-    if (!content || mentionLabels.length === 0) {
-      return content;
-    }
-
-    const mentionPattern = new RegExp(
-      `(@(?:${mentionLabels.map(escapeRegExp).join("|")}))`,
-      "gi",
-    );
-
-    return content.split(mentionPattern).map((part, index) => {
-      const isMention = mentionLabels.some(
-        (label) => part.toLowerCase() === `@${label.toLowerCase()}`,
-      );
-
-      if (!isMention) {
-        return <span key={`${part}-${index}`}>{part}</span>;
-      }
-
-      return (
-        <span
-          key={`${part}-${index}`}
-          className="rounded-sm bg-primary/10 text-primary ring-2 ring-primary/10"
-        >
-          {part}
-        </span>
-      );
-    });
   };
 
   // Kiểm tra quan hệ bạn bè đối với hội thoại tin nhắn riêng (1v1)
@@ -206,6 +182,13 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     if (!value.trim() && selectedImages.length === 0) return;
     const currValue = value;
     setValue("");
+    requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.style.height = "auto";
+      input.style.overflowY = "hidden";
+      setComposerExpanded(false);
+    });
 
     try {
       let imgUrls: string[] = [];
@@ -298,8 +281,27 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+  const insertEmoji = (emoji: string) => {
+    const input = inputRef.current;
+    if (!input) {
+      setValue((current) => `${current}${emoji}`);
+      return;
+    }
+
+    const start = input.selectionStart ?? value.length;
+    const end = input.selectionEnd ?? value.length;
+    const nextValue = `${value.slice(0, start)}${emoji}${value.slice(end)}`;
+    setValue(nextValue);
+
+    requestAnimationFrame(() => {
+      input.focus();
+      const nextCursor = start + emoji.length;
+      input.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
@@ -309,7 +311,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const replySenderName = replyingTo?.isOwn ? "chính bản thân" : (replySender ? replySender.displayName : "Người dùng");
 
   return (
-    <div className="flex flex-col bg-background border-t border-border/40">
+    <div className="flex min-w-0 flex-col overflow-x-hidden bg-background border-t border-border/40">
       {/* Replying Preview Bar */}
       {replyingTo && (
         <div className="px-4 py-2 flex items-center justify-between bg-primary/5 border-b border-border/30 animate-in slide-in-from-bottom-2 duration-200">
@@ -362,7 +364,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         </div>
       )}
 
-      <div className="flex items-center gap-2 p-3 min-h-[56px]">
+      <div className="flex w-full max-w-full min-w-0 items-end gap-2 overflow-x-hidden p-3 min-h-[56px]">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -376,7 +378,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
         <Button
           variant="ghost"
           size="icon"
-          className="hover:bg-primary/10 transition-smooth shrink-0"
+          className="mb-0.5 hover:bg-primary/10 transition-smooth shrink-0"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
           title="Gửi ảnh"
@@ -392,7 +394,7 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           type="button"
           variant="ghost"
           size="icon"
-          className="hover:bg-primary/10 transition-smooth shrink-0 text-muted-foreground hover:text-primary"
+          className="mb-0.5 hover:bg-primary/10 transition-smooth shrink-0 text-muted-foreground hover:text-primary"
           onClick={() => setPostDialogOpen(true)}
           disabled={uploading}
           title="Soạn bài viết/câu chuyện"
@@ -400,27 +402,19 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           <FileText className="size-4" />
         </Button>
 
-        <div className="flex-1 relative">
-          {selectedConvo.type === "group" && value && (
-            <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center overflow-hidden whitespace-pre px-2.5 pr-20 text-base leading-normal text-foreground md:text-sm">
-              {renderComposerValue(value)}
-            </div>
-          )}
-          <Input
+        <div className="relative flex min-w-0 max-w-full flex-1 items-center">
+          <Textarea
             ref={inputRef}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Soạn tin nhắn..."
-            className={`pr-20 h-9 bg-white border-border/50 focus:border-primary/50 transition-smooth resize-none ${
-              selectedConvo.type === "group" && value
-                ? "text-transparent caret-foreground"
-                : ""
-            }`}
+            rows={1}
+            className="box-border block w-full max-w-full min-w-0 min-h-9 max-h-36 resize-none overflow-x-hidden overflow-y-hidden whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [line-break:anywhere] bg-white py-2 pl-2.5 pr-20 text-sm leading-5 border-border/50 focus:border-primary/50 transition-smooth beautiful-scrollbar"
           />
           {showMentionSuggestions && mentionSuggestions.length > 0 && (
-            <div className="absolute bottom-11 left-0 z-20 w-72 overflow-hidden rounded-lg border border-border/70 bg-popover p-1 shadow-xl">
+            <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-lg border border-border/70 bg-popover p-1 shadow-xl">
               {mentionSuggestions.map((mention) => (
                 <button
                   key={mention._id}
@@ -458,16 +452,22 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
               ))}
             </div>
           )}
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          <div
+            className={`absolute right-2 flex size-8 items-center justify-center ${
+              composerExpanded
+                ? "bottom-1.5"
+                : "top-1/2 -translate-y-1/2"
+            }`}
+          >
             <EmojiPicker
-              onChange={(emoji: string) => setValue(`${value}${emoji}`)}
+              onChange={insertEmoji}
             />
           </div>
         </div>
 
         <Button
           onClick={sendMessage}
-          className="bg-gradient-chat hover:shadow-glow transition-smooth hover:scale-105 shrink-0"
+          className="mb-0.5 bg-gradient-chat hover:shadow-glow transition-smooth hover:scale-105 shrink-0"
           disabled={(!value.trim() && selectedImages.length === 0) || uploading}
         >
           <Send className="size-4 text-white" />
