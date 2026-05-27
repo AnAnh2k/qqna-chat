@@ -1,5 +1,5 @@
 import { chatService } from "@/services/chatService";
-import type { Conversation } from "@/types/chat";
+import type { Conversation, Message } from "@/types/chat";
 import type { ChatState } from "@/types/store";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -21,6 +21,24 @@ const sortConversationsByLatest = (conversations: Conversation[]) =>
   [...conversations].sort(
     (a, b) => getConversationTime(b) - getConversationTime(a),
   );
+
+const getForwardPayload = (message: Message) => {
+  const imageUrls =
+    message.imgUrls && message.imgUrls.length > 0
+      ? message.imgUrls
+      : message.imgUrl
+        ? [message.imgUrl]
+        : [];
+  const messageType = message.messageType === "post" ? "post" : "user";
+
+  return {
+    content: message.content ?? "",
+    imgUrl: imageUrls.length === 1 ? imageUrls[0] : undefined,
+    imgUrls: imageUrls.length > 1 ? imageUrls : undefined,
+    title: messageType === "post" ? (message.title ?? undefined) : undefined,
+    messageType,
+  };
+};
 
 export const useChatStore = create<ChatState>()(
   persist(
@@ -158,6 +176,49 @@ export const useChatStore = create<ChatState>()(
           playActionSound("send");
         } catch (error) {
           console.error("Lỗi xảy ra gửi group message", error);
+        }
+      },
+      forwardMessage: async (message, targets) => {
+        try {
+          const { conversations } = get();
+          const payload = getForwardPayload(message);
+
+          for (const target of targets) {
+            if (target.type === "friend") {
+              const directConversation = conversations.find(
+                (conversation) =>
+                  conversation.type === "direct" &&
+                  conversation.participants.some(
+                    (participant) => participant._id === target.id,
+                  ),
+              );
+
+              await chatService.sendDirectMessage(
+                target.id,
+                payload.content,
+                payload.imgUrl,
+                directConversation?._id,
+                payload.title,
+                payload.messageType,
+                payload.imgUrls,
+              );
+            } else {
+              await chatService.sendGroupMessage(
+                target.id,
+                payload.content,
+                payload.imgUrl,
+                [],
+                payload.title,
+                payload.messageType,
+                payload.imgUrls,
+              );
+            }
+          }
+
+          playActionSound("send");
+        } catch (error) {
+          console.error("Lỗi xảy ra khi chuyển tiếp tin nhắn", error);
+          throw error;
         }
       },
       addMessage: async (message) => {

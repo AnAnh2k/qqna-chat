@@ -18,13 +18,14 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { Button } from "../ui/button";
-import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil, ListTree } from "lucide-react";
+import { MoreHorizontal, Undo2, X, FileText, ChevronLeft, ChevronRight, CornerUpLeft, Smile, Pencil, ListTree, Forward } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { toast } from "sonner";
 import { useState, useEffect, useMemo } from "react";
 import ConfirmDialog from "../common/ConfirmDialog";
 import CreatePostDialog from "./CreatePostDialog";
 import { extractImageUrlsFromHtml, formatRichPostHtml } from "@/lib/richText";
+import ForwardMessageDialog from "./ForwardMessageDialog";
 
 interface MessageItemProps {
   message: Message;
@@ -243,6 +244,7 @@ const MessageItem = ({
   const [recalling, setRecalling] = useState(false);
   const [postReaderOpen, setPostReaderOpen] = useState(false);
   const [postEditOpen, setPostEditOpen] = useState(false);
+  const [forwardOpen, setForwardOpen] = useState(false);
 
   const handleRecall = async () => {
     try {
@@ -873,32 +875,39 @@ const MessageItem = ({
                     <CornerUpLeft className="size-3.5" />
                   </Button>
 
-                  {message.isOwn && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-6 p-0 hover:bg-muted rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
-                          />
-                        }
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 p-0 hover:bg-muted rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      }
+                    >
+                      <MoreHorizontal className="size-3.5" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align={message.isOwn ? "end" : "start"}
+                      className="w-32 min-w-32"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => setForwardOpen(true)}
+                        className="cursor-pointer text-xs gap-1.5"
                       >
-                        <MoreHorizontal className="size-3.5" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align={message.isOwn ? "end" : "start"}
-                        className="w-28 min-w-[7rem]"
-                      >
-                        {message.messageType === "post" && (
-                          <DropdownMenuItem
-                            onClick={() => setPostEditOpen(true)}
-                            className="cursor-pointer text-xs gap-1.5"
-                          >
-                            <Pencil className="size-3.5" />
-                            Sửa
-                          </DropdownMenuItem>
-                        )}
+                        <Forward className="size-3.5" />
+                        Chuyển tiếp
+                      </DropdownMenuItem>
+                      {message.isOwn && message.messageType === "post" && (
+                        <DropdownMenuItem
+                          onClick={() => setPostEditOpen(true)}
+                          className="cursor-pointer text-xs gap-1.5"
+                        >
+                          <Pencil className="size-3.5" />
+                          Sửa
+                        </DropdownMenuItem>
+                      )}
+                      {message.isOwn && (
                         <DropdownMenuItem
                           onClick={() => setRecallConfirmOpen(true)}
                           className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-xs gap-1.5"
@@ -906,9 +915,9 @@ const MessageItem = ({
                           <Undo2 className="size-3.5" />
                           Thu hồi
                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               )}
             </div>
@@ -1023,6 +1032,12 @@ const MessageItem = ({
         loading={recalling}
         icon={Undo2}
         onConfirm={handleRecall}
+      />
+      <ForwardMessageDialog
+        open={forwardOpen}
+        onOpenChange={setForwardOpen}
+        message={message}
+        selectedConvo={selectedConvo}
       />
       <Dialog open={postReaderOpen} onOpenChange={setPostReaderOpen}>
         <DialogContent className="w-[min(94vw,1100px)] sm:max-w-[60vw] bg-gradient-glass border-border/40 p-6 flex flex-col h-[95vh] max-h-[95vh]">

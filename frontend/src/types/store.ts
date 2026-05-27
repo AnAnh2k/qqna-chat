@@ -85,6 +85,10 @@ export interface ChatState {
     imgUrls?: string[],
     replyTo?: string,
   ) => Promise<void>;
+  forwardMessage: (
+    message: Message,
+    targets: Array<{ type: "friend" | "group"; id: string }>,
+  ) => Promise<void>;
   // add message
   addMessage: (message: Message) => Promise<void>;
   // update convo

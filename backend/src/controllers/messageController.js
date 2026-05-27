@@ -7,19 +7,42 @@ import {
 import { io } from "../socket/index.js";
 import { uploadImageFromBuffer } from "../middlewares/uploadMiddleware.js";
 
+const formatConversation = (conversation) => {
+  const participants = (conversation.participants || []).map((p) => ({
+    _id: p.userId?._id,
+    displayName: p.userId?.displayName,
+    avatarUrl: p.userId?.avatarUrl ?? null,
+    joinedAt: p.joinedAt,
+  }));
+
+  return { ...conversation.toObject(), participants };
+};
+
 export const sendDirectMessage = async (req, res) => {
   try {
     const { recipientId, content, conversationId, imgUrl, imgUrls, title, messageType, replyTo } = req.body;
     const senderId = req.user._id;
 
     let conversation;
+    let createdConversation = false;
 
     if (!content && !imgUrl && !title && (!imgUrls || imgUrls.length === 0)) {
       return res.status(400).json({ message: "Thiếu nội dung hoặc hình ảnh" });
     }
 
     if (conversationId) {
-      conversation = await Conversation.findById(conversationId);
+      conversation = await Conversation.findOne({
+        _id: conversationId,
+        type: "direct",
+        "participants.userId": { $all: [senderId, recipientId] },
+      });
+    }
+
+    if (!conversation) {
+      conversation = await Conversation.findOne({
+        type: "direct",
+        "participants.userId": { $all: [senderId, recipientId] },
+      });
     }
 
     if (!conversation) {
@@ -32,6 +55,7 @@ export const sendDirectMessage = async (req, res) => {
         lastMessageAt: new Date(),
         unreadCounts: new Map(),
       });
+      createdConversation = true;
     }
 
     const message = await Message.create({
@@ -50,6 +74,17 @@ export const sendDirectMessage = async (req, res) => {
     updateConversationAfterCreateMessage(conversation, populatedMessage, senderId);
 
     await conversation.save();
+
+    if (createdConversation) {
+      const populatedConversation = await Conversation.findById(conversation._id)
+        .populate({ path: "participants.userId", select: "displayName avatarUrl" })
+        .populate({ path: "seenBy.userId", select: "displayName avatarUrl" })
+        .populate({ path: "lastMessage.senderId", select: "displayName avatarUrl" });
+
+      const formattedConversation = formatConversation(populatedConversation);
+      io.to(senderId.toString()).emit("new-group", formattedConversation);
+      io.to(recipientId.toString()).emit("new-group", formattedConversation);
+    }
 
     await emitNewMessage(io, conversation, populatedMessage);
 

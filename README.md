@@ -112,6 +112,7 @@ Hệ thống đã hoàn thiện luồng trải nghiệm người dùng từ truy
 * Xem ảnh trong lightbox/phóng to.
 * Trả lời tin nhắn, hiển thị block quote của tin nhắn gốc.
 * Click vào tin nhắn được reply để cuộn về tin nhắn gốc nếu còn trong danh sách.
+* Chuyển tiếp tin nhắn sang bạn bè hoặc nhóm khác.
 * Mention thành viên trong nhóm bằng `@tên`, hỗ trợ `@mọi người`.
 * Gửi thông báo mention realtime cho người được nhắc.
 * Hiển thị mention nổi bật trong nội dung tin nhắn.
