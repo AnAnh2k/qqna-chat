@@ -7,6 +7,7 @@ import {
   markAsSeen,
   clearConversation,
   leaveGroup,
+  removeGroupMember,
   disbandGroup,
   addGroupMembers,
   updateGroupName,
@@ -28,6 +29,7 @@ router.patch("/:conversationId/name", updateGroupName);
 router.patch("/:conversationId/avatar", upload.single("file"), uploadGroupAvatar);
 router.patch("/:conversationId/messages/:messageId/pin", togglePinnedMessage);
 router.delete("/:conversationId/clear", clearConversation);
+router.delete("/:conversationId/members/:memberId", removeGroupMember);
 router.delete("/:conversationId/disband", disbandGroup);
 
 export default router;

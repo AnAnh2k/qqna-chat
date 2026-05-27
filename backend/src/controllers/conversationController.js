@@ -1,6 +1,7 @@
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import Friend from "../models/Friend.js";
+import User from "../models/User.js";
 import { io } from "../socket/index.js";
 import {
   emitNewMessage,
@@ -257,10 +258,15 @@ export const markAsSeen = async (req, res) => {
     const { conversationId } = req.params;
     const userId = req.user._id.toString();
 
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      "participants.userId": userId,
+    });
 
     if (!conversation) {
-      return res.status(404).json({ message: "Conversation không tồn tại" });
+      return res.status(404).json({
+        message: "Conversation không tồn tại hoặc bạn không phải thành viên",
+      });
     }
 
     const last = conversation.lastMessage;
@@ -456,6 +462,88 @@ export const leaveGroup = async (req, res) => {
     return res.status(200).json({ conversation: formatted });
   } catch (error) {
     console.error("Lỗi khi rời nhóm:", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
+  }
+};
+
+export const removeGroupMember = async (req, res) => {
+  try {
+    const { conversationId, memberId } = req.params;
+    const userId = req.user._id;
+    const requesterId = userId.toString();
+    const targetMemberId = memberId.toString();
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      type: "group",
+      "participants.userId": userId,
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        message: "Nhóm không tồn tại hoặc bạn không phải thành viên",
+      });
+    }
+
+    if (conversation.group?.createdBy?.toString() !== requesterId) {
+      return res.status(403).json({
+        message: "Chỉ trưởng nhóm mới có thể xóa thành viên",
+      });
+    }
+
+    if (targetMemberId === requesterId) {
+      return res.status(400).json({
+        message: "Trưởng nhóm không thể tự xóa khỏi nhóm",
+      });
+    }
+
+    if (conversation.group?.createdBy?.toString() === targetMemberId) {
+      return res.status(400).json({
+        message: "Không thể xóa trưởng nhóm khỏi nhóm",
+      });
+    }
+
+    const isTargetMember = conversation.participants.some(
+      (p) => p.userId.toString() === targetMemberId,
+    );
+
+    if (!isTargetMember) {
+      return res.status(404).json({
+        message: "Thành viên này không còn trong nhóm",
+      });
+    }
+
+    const removedUser = await User.findById(targetMemberId).select("displayName");
+    const removedName = removedUser?.displayName || "một thành viên";
+
+    conversation.participants = conversation.participants.filter(
+      (p) => p.userId.toString() !== targetMemberId,
+    );
+    conversation.unreadCounts?.delete(targetMemberId);
+    conversation.seenBy = conversation.seenBy.filter(
+      (seen) => seen.userId?.toString() !== targetMemberId,
+    );
+
+    const systemMessage = await Message.create({
+      conversationId,
+      senderId: userId,
+      content: `${req.user.displayName} đã xóa ${removedName} khỏi nhóm`,
+      messageType: "system",
+    });
+
+    updateConversationAfterCreateMessage(conversation, systemMessage, userId);
+    await conversation.save();
+    await conversation.populate(conversationPopulatePaths);
+
+    const formatted = formatConversation(conversation);
+
+    io.to(targetMemberId).emit("group-removed", { conversationId });
+    io.to(conversationId).emit("group-updated", formatted);
+    await emitNewMessage(io, conversation, systemMessage);
+
+    return res.status(200).json({ conversation: formatted });
+  } catch (error) {
+    console.error("Lỗi khi xóa thành viên khỏi nhóm:", error);
     return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

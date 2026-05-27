@@ -3,8 +3,7 @@ import UserAvatar from "./UserAvatar";
 import GroupChatAvatar from "./GroupChatAvatar";
 import { Badge } from "../ui/badge";
 import { useUserStore } from "@/stores/useUserStore";
-import type { Conversation } from "@/types/chat";
-import { Card } from "../ui/card";
+import type { Conversation, Participant } from "@/types/chat";
 import { Calendar, LogOut, Shield, Trash2, UserPlus, Users, Pencil, Check, X, Camera } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatStore } from "@/stores/useChatStore";
@@ -34,6 +33,15 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     : fallback;
 };
 
+const getEntityId = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "_id" in value) {
+    const id = (value as { _id?: unknown })._id;
+    return typeof id === "string" ? id : undefined;
+  }
+  return undefined;
+};
+
 interface GroupMembersDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -47,6 +55,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
     leaveGroup,
     disbandGroup,
     addGroupMembers,
+    removeGroupMember,
     renameGroup,
     uploadGroupAvatar,
   } = useChatStore();
@@ -58,13 +67,16 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
   const [selectedMembers, setSelectedMembers] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingMembers, setAddingMembers] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<Participant | null>(null);
+  const [removingMember, setRemovingMember] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newGroupName, setNewGroupName] = useState(conversation.group?.name || "");
   const [renaming, setRenaming] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarPreviewOpen, setAvatarPreviewOpen] = useState(false);
-  const adminId = conversation.group?.createdBy;
-  const isCurrentUserAdmin = currentUser?._id === adminId;
+  const adminId = getEntityId(conversation.group?.createdBy);
+  const currentUserId = getEntityId(currentUser?._id);
+  const isCurrentUserAdmin = !!currentUserId && currentUserId === adminId;
 
   useEffect(() => {
     if (open) {
@@ -77,6 +89,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
       setAddMembersOpen(false);
       setMemberSearch("");
       setSelectedMembers([]);
+      setMemberToRemove(null);
       setIsEditingName(false);
       setNewGroupName(conversation.group?.name || "");
     }
@@ -137,6 +150,21 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
       );
     } finally {
       setAddingMembers(false);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
+
+    try {
+      setRemovingMember(true);
+      await removeGroupMember(conversation._id, memberToRemove._id);
+      toast.success(`Đã xóa ${memberToRemove.displayName} khỏi nhóm.`);
+      setMemberToRemove(null);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Không thể xóa thành viên khỏi nhóm."));
+    } finally {
+      setRemovingMember(false);
     }
   };
 
@@ -216,7 +244,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="w-[min(92vw,820px)] overflow-y-auto overscroll-contain beautiful-scrollbar flex flex-col p-0 h-[95vh] max-h-[95vh] bg-gradient-glass">
+        <DialogContent className="flex h-[95vh] max-h-[95vh] w-[min(92vw,820px)] flex-col overflow-hidden p-0 bg-gradient-glass">
           <DialogHeader className="shrink-0 border-b border-border/40 px-6 py-5">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Users className="size-5 text-primary" />
@@ -224,7 +252,7 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 pt-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 px-6 pb-5 pt-4">
             <div className="shrink-0 flex items-center gap-3 rounded-xl border border-border/40 bg-muted/20 p-3.5 shadow-sm">
               <div className="relative shrink-0">
                 <button
@@ -333,52 +361,79 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
             )}
           </div>
 
-          <div className="min-h-[130px] flex-1 overflow-y-auto space-y-2 beautiful-scrollbar pr-1 py-1">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain py-1 pr-2 pb-3 beautiful-scrollbar">
             {conversation.participants.map((member) => {
-              const isAdmin = member._id === adminId;
+              const memberId = getEntityId(member._id);
+              const isAdmin = !!memberId && memberId === adminId;
+              const canRemoveMember =
+                isCurrentUserAdmin &&
+                !isAdmin &&
+                memberId !== currentUserId;
 
               return (
-                <Card
+                <div
                   key={member._id}
                   onClick={() => {
                     setOpen(false); // Đóng modal thành viên
                     viewProfile(member._id); // Mở profile
                   }}
-                  className="p-3 flex items-center justify-between cursor-pointer transition-smooth hover:shadow-soft hover:bg-muted/30 group border-border/40"
+                  className="group flex h-[76px] min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-border/35 bg-background/55 px-3.5 py-2.5 transition-smooth hover:bg-muted/35 hover:shadow-sm"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
                     <UserAvatar
                       type="chat"
                       name={member.displayName}
                       avatarUrl={member.avatarUrl ?? undefined}
-                      className="ring-2 ring-violet-100 group-hover:ring-primary/20"
+                      className="size-10 shrink-0 ring-2 ring-violet-100 group-hover:ring-primary/20"
                     />
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-semibold text-sm truncate text-slate-800 dark:text-slate-200">
+                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 overflow-hidden">
+                      <span className="truncate text-sm font-semibold leading-5 text-slate-800 dark:text-slate-200">
                         {member.displayName}
                       </span>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Calendar className="size-3" />
-                        <span>Tham gia: {new Date(member.joinedAt).toLocaleDateString("vi-VN")}</span>
-                      </span>
+                      <div className="flex min-w-0 items-center gap-2 text-xs leading-4 text-muted-foreground">
+                        <span className="flex min-w-0 items-center gap-1">
+                          <Calendar className="size-3 shrink-0" />
+                          <span className="truncate whitespace-nowrap">
+                            Tham gia: {new Date(member.joinedAt).toLocaleDateString("vi-VN")}
+                          </span>
+                        </span>
+                        {isAdmin && (
+                          <Badge
+                            variant="secondary"
+                            className="h-5 shrink-0 rounded-full border-0 bg-amber-500/10 px-2 text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+                          >
+                            <Shield className="size-3 fill-amber-500/20" />
+                            <span>Trưởng nhóm</span>
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {isAdmin && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-0 flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full select-none"
-                    >
-                      <Shield className="size-3 fill-amber-500/20" />
-                      <span>Trưởng nhóm</span>
-                    </Badge>
+                  {canRemoveMember && (
+                    <div className="ml-2 flex w-9 shrink-0 items-center justify-end self-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-8 rounded-full text-destructive/65 transition-smooth hover:bg-destructive/10 hover:text-destructive hover:shadow-sm focus:bg-destructive/10 focus:text-destructive"
+                        title="Xóa thành viên"
+                        aria-label={`Xóa ${member.displayName} khỏi nhóm`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setMemberToRemove(member);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   )}
-                </Card>
+                </div>
               );
             })}
           </div>
 
-          <div className="shrink-0 space-y-3 border-t border-border/40 pt-4">
+          <div className="shrink-0 space-y-3 border-t border-border/40 bg-background/65 pt-4">
             <Button
               variant="outline"
               className="w-full"
@@ -461,6 +516,23 @@ const GroupMembersDialog = ({ open, setOpen, conversation }: GroupMembersDialogP
         loading={loading}
         icon={isCurrentUserAdmin ? Trash2 : LogOut}
         onConfirm={handleGroupAction}
+      />
+      <ConfirmDialog
+        open={!!memberToRemove}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setMemberToRemove(null);
+        }}
+        title="Xóa thành viên"
+        description={
+          memberToRemove
+            ? `Bạn có chắc chắn muốn xóa ${memberToRemove.displayName} khỏi nhóm "${conversation.group?.name}"? Người này sẽ không còn xem được tin nhắn nhóm.`
+            : ""
+        }
+        confirmText="Xóa khỏi nhóm"
+        variant="destructive"
+        loading={removingMember}
+        icon={Trash2}
+        onConfirm={handleRemoveMember}
       />
       <AvatarPreviewDialog
         open={avatarPreviewOpen}

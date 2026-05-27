@@ -464,6 +464,19 @@ export const useChatStore = create<ChatState>()(
           throw error;
         }
       },
+      removeGroupMember: async (conversationId, memberId) => {
+        try {
+          const conversation = await chatService.removeGroupMember(
+            conversationId,
+            memberId,
+          );
+          get().updateConversation(conversation);
+          playActionSound("remove");
+        } catch (error) {
+          console.error("Lỗi xảy ra khi xóa thành viên nhóm trong store", error);
+          throw error;
+        }
+      },
       leaveGroup: async (conversationId) => {
         try {
           await chatService.leaveGroup(conversationId);

@@ -49,12 +49,17 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
     // new message
     socket.on("new-message", ({ message, conversation, unreadCounts }) => {
-      useChatStore.getState().addMessage(message);
-
       // Tìm thông tin người gửi từ danh sách participants trong store
       const existingConvo = useChatStore
         .getState()
         .conversations.find((c) => c._id === conversation._id);
+
+      if (!existingConvo) {
+        return;
+      }
+
+      useChatStore.getState().addMessage(message);
+
       const senderParticipant = existingConvo?.participants.find(
         (p) => p._id?.toString() === message.senderId?.toString(),
       );
@@ -148,6 +153,17 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     });
 
     socket.on("group-updated", (conversation) => {
+      const currentUserId = useAuthStore.getState().user?._id;
+      const isStillMember = conversation.participants?.some(
+        (participant: { _id?: string }) => participant._id === currentUserId,
+      );
+
+      if (!isStillMember) {
+        socket.emit("leave-conversation", conversation._id);
+        useChatStore.getState().removeConversation(conversation._id);
+        return;
+      }
+
       useChatStore.getState().updateConversation(conversation);
     });
 

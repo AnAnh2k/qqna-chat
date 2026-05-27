@@ -106,6 +106,7 @@ export interface ChatState {
   ) => Promise<void>;
   clearConversation: (conversationId: string) => Promise<void>;
   addGroupMembers: (conversationId: string, memberIds: string[]) => Promise<void>;
+  removeGroupMember: (conversationId: string, memberId: string) => Promise<void>;
   leaveGroup: (conversationId: string) => Promise<void>;
   disbandGroup: (conversationId: string) => Promise<void>;
   renameGroup: (conversationId: string, name: string) => Promise<void>;

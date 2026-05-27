@@ -97,6 +97,12 @@ export const chatService = {
     });
     return res.data.conversation;
   },
+  async removeGroupMember(conversationId: string, memberId: string) {
+    const res = await api.delete(
+      `/conversations/${conversationId}/members/${memberId}`,
+    );
+    return res.data.conversation;
+  },
   async disbandGroup(conversationId: string) {
     const res = await api.delete(`/conversations/${conversationId}/disband`);
     return res.data;
