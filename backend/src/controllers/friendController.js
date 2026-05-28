@@ -180,11 +180,14 @@ export const getAllFriends = async (req, res) => {
       .populate("userB", "_id displayName avatarUrl username")
       .lean();
 
-    if (!friendships.length) {
+    // Lọc bỏ những kết bạn chứa tài khoản đã bị xóa khỏi DB
+    const validFriendships = friendships.filter((f) => f.userA && f.userB);
+
+    if (!validFriendships.length) {
       return res.status(200).json({ friends: [] });
     }
 
-    const friends = friendships.map((f) => {
+    const friends = validFriendships.map((f) => {
       const friendObj =
         f.userA._id.toString() === userId.toString() ? f.userB : f.userA;
 
@@ -215,7 +218,11 @@ export const getFriendsRequests = async (req, res) => {
       FriendRequest.find({ to: userId }).populate("from", populateFields),
     ]);
 
-    return res.status(200).json({ sent, received });
+    // Lọc bỏ những yêu cầu kết bạn liên quan đến tài khoản đã bị xóa khỏi DB
+    const validSent = sent.filter((r) => r.to !== null);
+    const validReceived = received.filter((r) => r.from !== null);
+
+    return res.status(200).json({ sent: validSent, received: validReceived });
   } catch (error) {
     console.error("Lỗi khi gọi getFriendsRequests:", error);
     res.status(500).json({ message: "Lỗi hệ thống" });
