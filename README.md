@@ -2,6 +2,9 @@
 
 Ứng dụng trò chuyện và hỏi đáp thời gian thực (Real-time Q&A/Chat Platform) được xây dựng trên nền tảng **MERN Stack** (MongoDB, Express, React, Node.js).
 
+## Tài khoản test ở link demo:
+username: user3
+password: 123456
 ---
 
 ## 🚀 Hướng Dẫn Chạy Dưới Localhost (Running Locally)
