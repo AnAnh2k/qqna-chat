@@ -34,8 +34,15 @@ const allowedOrigins = [process.env.CLIENT_URL];
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Cho phép requests không có origin (như postman, curl) hoặc bất kỳ cổng localhost nào
-      if (!origin || origin.startsWith("http://localhost:") || allowedOrigins.includes(origin)) {
+      // Cho phép requests không có origin (như postman, curl), localhost hoặc IP mạng nội bộ
+      if (
+        !origin ||
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://192.168.") ||
+        origin.startsWith("http://10.") ||
+        origin.startsWith("http://172.") ||
+        allowedOrigins.includes(origin)
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Blocked by CORS"));

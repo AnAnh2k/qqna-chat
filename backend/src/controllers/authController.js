@@ -6,10 +6,11 @@ import Session from "../models/Session.js";
 
 const ACCESS_TOKEN_TTL = "30m"; // thường là dưới 15p
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000; //14 ngày
+const isProduction = process.env.NODE_ENV === "production";
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true, // chỉ gửi cookie qua HTTPS
-  sameSite: "none", // cho phép gửi cookie khi frontend/backend khác origin
+  secure: isProduction, // chỉ gửi cookie qua HTTPS ở production
+  sameSite: isProduction ? "none" : "lax", // ở local dùng 'lax', production dùng 'none'
 };
 
 export const signUp = async (req, res) => {
