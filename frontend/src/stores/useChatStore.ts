@@ -22,6 +22,58 @@ const sortConversationsByLatest = (conversations: Conversation[]) =>
     (a, b) => getConversationTime(b) - getConversationTime(a),
   );
 
+const getEntityId = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "_id" in value) {
+    const id = (value as { _id?: unknown })._id;
+    return typeof id === "string" ? id : undefined;
+  }
+  return undefined;
+};
+
+const normalizeConversation = (
+  conversation: Partial<Conversation> & Pick<Conversation, "_id">,
+) => {
+  if (!Array.isArray(conversation.participants)) {
+    return conversation;
+  }
+
+  const participants = conversation.participants.reduce<
+    Conversation["participants"]
+  >((normalized, participant) => {
+    const rawUser =
+      "userId" in participant
+        ? (participant as unknown as { userId?: unknown }).userId
+        : participant;
+    const participantId = getEntityId(rawUser) ?? getEntityId(participant);
+
+    if (!participantId) return normalized;
+
+    normalized.push({
+      ...participant,
+      _id: participantId,
+      displayName:
+        participant.displayName ??
+        (typeof rawUser === "object" && rawUser !== null
+          ? (rawUser as { displayName?: string }).displayName
+          : undefined) ??
+        "",
+      avatarUrl:
+        participant.avatarUrl ??
+        (typeof rawUser === "object" && rawUser !== null
+          ? (rawUser as { avatarUrl?: string | null }).avatarUrl
+          : null),
+    });
+
+    return normalized;
+  }, []);
+
+  return {
+    ...conversation,
+    participants,
+  };
+};
+
 const getForwardPayload = (message: Message) => {
   const imageUrls =
     message.imgUrls && message.imgUrls.length > 0
@@ -259,17 +311,18 @@ export const useChatStore = create<ChatState>()(
       },
       updateConversation: (conversation) => {
         set((state) => {
+          const normalizedConversation = normalizeConversation(conversation);
           const existingConversation = state.conversations.find(
-            (c) => c._id === conversation._id,
+            (c) => c._id === normalizedConversation._id,
           );
 
           const updatedConversation: Conversation = existingConversation
-            ? { ...existingConversation, ...conversation }
-            : (conversation as Conversation);
+            ? { ...existingConversation, ...normalizedConversation }
+            : (normalizedConversation as Conversation);
 
           const nextConversations = existingConversation
             ? state.conversations.map((c) =>
-                c._id === conversation._id ? updatedConversation : c,
+                c._id === normalizedConversation._id ? updatedConversation : c,
               )
             : [updatedConversation, ...state.conversations];
 
@@ -458,6 +511,7 @@ export const useChatStore = create<ChatState>()(
             memberIds,
           );
           get().updateConversation(conversation);
+          void get().fetchConversations();
           playActionSound("success");
         } catch (error) {
           console.error("Lỗi xảy ra khi thêm thành viên nhóm trong store", error);
@@ -471,6 +525,7 @@ export const useChatStore = create<ChatState>()(
             memberId,
           );
           get().updateConversation(conversation);
+          void get().fetchConversations();
           playActionSound("remove");
         } catch (error) {
           console.error("Lỗi xảy ra khi xóa thành viên nhóm trong store", error);
@@ -501,6 +556,7 @@ export const useChatStore = create<ChatState>()(
         try {
           const conversation = await chatService.renameGroup(conversationId, name);
           get().updateConversation(conversation);
+          void get().fetchConversations();
           playActionSound("success");
         } catch (error) {
           console.error("Lỗi xảy ra khi đổi tên nhóm trong store", error);
@@ -514,6 +570,7 @@ export const useChatStore = create<ChatState>()(
             file,
           );
           get().updateConversation(conversation);
+          void get().fetchConversations();
           playActionSound("success");
         } catch (error) {
           console.error("Lỗi xảy ra khi upload avatar nhóm trong store", error);

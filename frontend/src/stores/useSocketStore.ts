@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { playMessageSound } from "@/lib/notificationSound";
 import { useNotificationSettingsStore } from "./useNotificationSettingsStore";
 import { hasVisibleQQNATab } from "@/lib/pagePresence";
+import type { Conversation } from "@/types/chat";
 
 const baseURL = import.meta.env.VITE_SOCKET_URL;
 
@@ -152,20 +153,51 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       socket.emit("join-conversation", conversation._id);
     });
 
-    socket.on("group-updated", (conversation) => {
-      const currentUserId = useAuthStore.getState().user?._id;
-      const isStillMember = conversation.participants?.some(
-        (participant: { _id?: string }) => participant._id === currentUserId,
-      );
+    const handleGroupSync = (payload: unknown) => {
+      const conversation =
+        typeof payload === "object" && payload !== null && "conversation" in payload
+          ? (payload as { conversation?: unknown }).conversation
+          : payload;
 
-      if (!isStillMember) {
-        socket.emit("leave-conversation", conversation._id);
-        useChatStore.getState().removeConversation(conversation._id);
+      if (
+        typeof conversation !== "object" ||
+        conversation === null ||
+        !("_id" in conversation)
+      ) {
         return;
       }
 
-      useChatStore.getState().updateConversation(conversation);
-    });
+      const currentUserId = useAuthStore.getState().user?._id;
+      const typedConversation = conversation as {
+        _id: string;
+        participants?: Array<{ _id?: string; userId?: string | { _id?: string } }>;
+      };
+      const isStillMember = typedConversation.participants?.some(
+        (participant) => {
+          const participantId =
+            participant._id ??
+            (typeof participant.userId === "string"
+              ? participant.userId
+              : participant.userId?._id);
+
+          return participantId === currentUserId;
+        },
+      );
+
+      if (typedConversation.participants && !isStillMember) {
+        socket.emit("leave-conversation", typedConversation._id);
+        useChatStore.getState().removeConversation(typedConversation._id);
+        return;
+      }
+
+      socket.emit("join-conversation", typedConversation._id);
+      useChatStore.getState().updateConversation(typedConversation as Conversation);
+    };
+
+    socket.on("group-updated", handleGroupSync);
+    socket.on("member_added", handleGroupSync);
+    socket.on("member_removed", handleGroupSync);
+    socket.on("group_updated", handleGroupSync);
 
     socket.on("mention-notification", ({ senderName, conversationName }) => {
       toast.info(

@@ -25,6 +25,12 @@ const MENTION_DROPDOWN_MAX_HEIGHT = 260;
 const MENTION_DROPDOWN_GAP = 8;
 const MENTION_DROPDOWN_VIEWPORT_PADDING = 12;
 
+const normalizeMentionText = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
 type MentionDropdownPosition = {
   left: number;
   width: number;
@@ -35,7 +41,14 @@ type MentionDropdownPosition = {
 
 const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
   const { user } = useAuthStore();
-  const { sendDirectMessage, sendGroupMessage, uploadMessageImage, replyingTo, setReplyingTo } =
+  const {
+    conversations,
+    sendDirectMessage,
+    sendGroupMessage,
+    uploadMessageImage,
+    replyingTo,
+    setReplyingTo,
+  } =
     useChatStore();
   const { friends, getFriends } = useFriendStore();
   const [value, setValue] = useState("");
@@ -83,17 +96,20 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
     };
   }, []);
 
+  const currentConvo =
+    conversations.find((conversation) => conversation._id === selectedConvo._id) ??
+    selectedConvo;
   const mentionableMembers =
-    selectedConvo.type === "group" && user
-      ? selectedConvo.participants.filter((member) => member._id !== user._id)
+    currentConvo.type === "group" && user
+      ? currentConvo.participants.filter((member) => member._id !== user._id)
       : [];
   const mentionMatch = value.match(/(?:^|\s)@([^\s@]*)$/);
-  const mentionQuery = mentionMatch?.[1]?.toLowerCase() ?? "";
+  const mentionQuery = normalizeMentionText(mentionMatch?.[1] ?? "");
   const showMentionSuggestions =
-    selectedConvo.type === "group" && mentionMatch !== null;
+    currentConvo.type === "group" && mentionMatch !== null;
   const mentionSuggestions: MentionSuggestion[] = showMentionSuggestions
     ? [
-        ...(mentionAllLabel.includes(mentionQuery)
+        ...(normalizeMentionText(mentionAllLabel).includes(mentionQuery)
           ? [
               {
                 type: "all" as const,
@@ -104,9 +120,9 @@ const MessageInput = ({ selectedConvo }: { selectedConvo: Conversation }) => {
           : []),
         ...mentionableMembers
           .filter((member) =>
-            member.displayName.toLowerCase().includes(mentionQuery),
+            normalizeMentionText(member.displayName).includes(mentionQuery),
           )
-          .slice(0, 5)
+          .sort((a, b) => a.displayName.localeCompare(b.displayName, "vi"))
           .map((member) => ({ ...member, type: "member" as const })),
       ]
     : [];
