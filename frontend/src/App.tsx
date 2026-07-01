@@ -23,6 +23,19 @@ function App() {
     setTheme(isDark);
   }, [isDark]);
 
+  useEffect(() => {
+    if (import.meta.env.VITE_HIDE_IMAGES === "true") {
+      const style = document.createElement("style");
+      style.id = "hide-images-style";
+      style.innerHTML = "img { display: none !important; }";
+      document.head.appendChild(style);
+      return () => {
+        const el = document.getElementById("hide-images-style");
+        if (el) el.remove();
+      };
+    }
+  }, []);
+
   useEffect(() => startPagePresenceTracking(), []);
 
   useEffect(() => {
